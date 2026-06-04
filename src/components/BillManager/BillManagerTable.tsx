@@ -1,14 +1,15 @@
-import { Button, Space, Table, Tag } from 'antd';
+import { Button, Popconfirm, Space, Table, Tag } from 'antd';
 import type { TableColumnsType } from 'antd';
 import type { MonthlyBill } from '../../types/bill';
 import { formatAmount } from '../../utils/format';
 
 interface BillManagerTableProps {
   data: MonthlyBill[];
-  onOpenAnalysis: () => void;
+  onOpenAnalysis: (month: string) => void;
+  onDeleteMonth: (month: string) => void;
 }
 
-export default function BillManagerTable({ data, onOpenAnalysis }: BillManagerTableProps) {
+export default function BillManagerTable({ data, onOpenAnalysis, onDeleteMonth }: BillManagerTableProps) {
   const columns: TableColumnsType<MonthlyBill> = [
     { title: '月份', dataIndex: 'month', key: 'month' },
     { title: '文件名', dataIndex: 'fileName', key: 'fileName' },
@@ -30,15 +31,20 @@ export default function BillManagerTable({ data, onOpenAnalysis }: BillManagerTa
     {
       title: '操作',
       key: 'actions',
-      render: () => (
+      render: (_, record) => (
         <Space>
-          <Button size="small" type="link" onClick={onOpenAnalysis}>
+          <Button size="small" type="link" onClick={() => onOpenAnalysis(record.month)}>
             查看分析
           </Button>
+          <Popconfirm title={`删除 ${record.month} 的本地账单？`} onConfirm={() => onDeleteMonth(record.month)}>
+            <Button size="small" danger type="link">
+              删除
+            </Button>
+          </Popconfirm>
         </Space>
       ),
     },
   ];
 
-  return <Table rowKey="id" columns={columns} dataSource={data} pagination={false} />;
+  return <Table rowKey="id" columns={columns} dataSource={data} pagination={false} locale={{ emptyText: '暂无已保存月份，请先上传账单' }} />;
 }

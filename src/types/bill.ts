@@ -1,3 +1,5 @@
+export type RawBillRecord = Record<string, unknown>;
+
 export interface StandardBillRecord {
   id: string;
   rawIndex: number;
@@ -19,6 +21,7 @@ export interface StandardBillRecord {
 export interface AbnormalBillRecord {
   id: string;
   rawIndex: number;
+  month?: string;
   reason: string;
   rawDate: string;
   rawType: string;
@@ -39,6 +42,14 @@ export interface MonthlyBill {
   totalExpense: number;
   expenseCount: number;
   abnormalCount: number;
+}
+
+export interface ParsedBillFile {
+  fileName: string;
+  rawRecords: RawBillRecord[];
+  records: StandardBillRecord[];
+  abnormalRecords: AbnormalBillRecord[];
+  months: string[];
 }
 
 export interface MonthlySummaryRow {
@@ -83,4 +94,31 @@ export interface CombinedCategoryRow {
   primaryIncomeRatio: number;
   secondaryIncomeRatio: number;
   secondaryCount: number;
+}
+
+export interface MonthlyExpenseTrendPoint {
+  month: string;
+  totalExpense: number;
+}
+
+export interface PrimaryCategoryChartPoint {
+  name: string;
+  amount: number;
+  ratio: number;
+}
+
+export interface SecondaryCategoryRankingPoint {
+  name: string;
+  primaryCategory: string;
+  secondaryCategory: string;
+  amount: number;
+  ratio: number;
+}
+
+export interface DetailFilter {
+  month: string;
+  primaryCategory?: string;
+  secondaryCategory?: string;
+  title: string;
+  expectedAmount: number;
 }

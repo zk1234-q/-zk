@@ -1,11 +1,34 @@
-export function calculateMonthlyExpenseTrend(): never {
-  throw new Error('calculateMonthlyExpenseTrend 待业务功能阶段实现');
+import type {
+  MonthlyBill,
+  MonthlyExpenseTrendPoint,
+  PrimaryCategoryChartPoint,
+  PrimaryCategoryRow,
+  SecondaryCategoryRankingPoint,
+  SecondaryCategoryRow,
+} from '../types/bill';
+import { calculateMonthlySummary } from './calculateSummary';
+
+export function calculateMonthlyExpenseTrend(monthlyBills: MonthlyBill[]): MonthlyExpenseTrendPoint[] {
+  return calculateMonthlySummary(monthlyBills).map((item) => ({
+    month: item.month,
+    totalExpense: item.totalExpense,
+  }));
 }
 
-export function calculatePrimaryCategoryChart(): never {
-  throw new Error('calculatePrimaryCategoryChart 待业务功能阶段实现');
+export function calculatePrimaryCategoryChart(rows: PrimaryCategoryRow[]): PrimaryCategoryChartPoint[] {
+  return rows.map((row) => ({
+    name: row.primaryCategory,
+    amount: row.primaryAmount,
+    ratio: row.primaryExpenseRatio,
+  }));
 }
 
-export function calculateSecondaryCategoryRanking(): never {
-  throw new Error('calculateSecondaryCategoryRanking 待业务功能阶段实现');
+export function calculateSecondaryCategoryRanking(rows: SecondaryCategoryRow[]): SecondaryCategoryRankingPoint[] {
+  return rows.map((row) => ({
+    name: `${row.primaryCategory}-${row.secondaryCategory}`,
+    primaryCategory: row.primaryCategory,
+    secondaryCategory: row.secondaryCategory,
+    amount: row.secondaryAmount,
+    ratio: row.secondaryExpenseRatio,
+  }));
 }

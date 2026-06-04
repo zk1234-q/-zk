@@ -1,14 +1,27 @@
 import { Button, Tabs, Table } from 'antd';
 import type { TableColumnsType } from 'antd';
 import type { CombinedCategoryRow, MonthlySummaryRow, PrimaryCategoryRow, SecondaryCategoryRow } from '../../types/bill';
-import { mockCombinedRows, mockMonthlySummary, mockPrimaryRows, mockSecondaryRows } from '../../mock/bills';
 import { formatAmount, formatPercent } from '../../utils/format';
 
 interface AnalysisTablesProps {
-  onOpenDetail: () => void;
+  monthlyRows: MonthlySummaryRow[];
+  primaryRows: PrimaryCategoryRow[];
+  secondaryRows: SecondaryCategoryRow[];
+  combinedRows: CombinedCategoryRow[];
+  onOpenMonthlyDetail: (row: MonthlySummaryRow) => void;
+  onOpenPrimaryDetail: (primaryCategory: string, amount: number) => void;
+  onOpenSecondaryDetail: (primaryCategory: string, secondaryCategory: string, amount: number) => void;
 }
 
-export default function AnalysisTables({ onOpenDetail }: AnalysisTablesProps) {
+export default function AnalysisTables({
+  monthlyRows,
+  primaryRows,
+  secondaryRows,
+  combinedRows,
+  onOpenMonthlyDetail,
+  onOpenPrimaryDetail,
+  onOpenSecondaryDetail,
+}: AnalysisTablesProps) {
   const monthlyColumns: TableColumnsType<MonthlySummaryRow> = [
     { title: '月份', dataIndex: 'month', key: 'month' },
     { title: '月收入', dataIndex: 'income', key: 'income', align: 'right', render: (value: number) => formatAmount(value) },
@@ -17,8 +30,8 @@ export default function AnalysisTables({ onOpenDetail }: AnalysisTablesProps) {
       dataIndex: 'totalExpense',
       key: 'totalExpense',
       align: 'right',
-      render: (value: number) => (
-        <Button type="link" onClick={onOpenDetail}>
+      render: (value: number, row) => (
+        <Button type="link" onClick={() => onOpenMonthlyDetail(row)}>
           {formatAmount(value)}
         </Button>
       ),
@@ -37,8 +50,8 @@ export default function AnalysisTables({ onOpenDetail }: AnalysisTablesProps) {
       key: 'primaryAmount',
       align: 'right',
       sorter: (a, b) => a.primaryAmount - b.primaryAmount,
-      render: (value: number) => (
-        <Button type="link" onClick={onOpenDetail}>
+      render: (value: number, row) => (
+        <Button type="link" onClick={() => onOpenPrimaryDetail(row.primaryCategory, row.primaryAmount)}>
           {formatAmount(value)}
         </Button>
       ),
@@ -58,8 +71,8 @@ export default function AnalysisTables({ onOpenDetail }: AnalysisTablesProps) {
       key: 'secondaryAmount',
       align: 'right',
       sorter: (a, b) => a.secondaryAmount - b.secondaryAmount,
-      render: (value: number) => (
-        <Button type="link" onClick={onOpenDetail}>
+      render: (value: number, row) => (
+        <Button type="link" onClick={() => onOpenSecondaryDetail(row.primaryCategory, row.secondaryCategory, row.secondaryAmount)}>
           {formatAmount(value)}
         </Button>
       ),
@@ -79,8 +92,8 @@ export default function AnalysisTables({ onOpenDetail }: AnalysisTablesProps) {
       key: 'primaryAmount',
       align: 'right',
       sorter: (a, b) => a.primaryAmount - b.primaryAmount,
-      render: (value: number) => (
-        <Button type="link" onClick={onOpenDetail}>
+      render: (value: number, row) => (
+        <Button type="link" onClick={() => onOpenPrimaryDetail(row.primaryCategory, row.primaryAmount)}>
           {formatAmount(value)}
         </Button>
       ),
@@ -92,8 +105,8 @@ export default function AnalysisTables({ onOpenDetail }: AnalysisTablesProps) {
       key: 'secondaryAmount',
       align: 'right',
       sorter: (a, b) => a.secondaryAmount - b.secondaryAmount,
-      render: (value: number) => (
-        <Button type="link" onClick={onOpenDetail}>
+      render: (value: number, row) => (
+        <Button type="link" onClick={() => onOpenSecondaryDetail(row.primaryCategory, row.secondaryCategory, row.secondaryAmount)}>
           {formatAmount(value)}
         </Button>
       ),
@@ -111,22 +124,22 @@ export default function AnalysisTables({ onOpenDetail }: AnalysisTablesProps) {
         {
           key: 'monthly',
           label: '月度汇总',
-          children: <Table rowKey="month" columns={monthlyColumns} dataSource={mockMonthlySummary} pagination={false} scroll={{ x: 980 }} />,
+          children: <Table rowKey="month" columns={monthlyColumns} dataSource={monthlyRows} pagination={false} scroll={{ x: 980 }} />,
         },
         {
           key: 'primary',
           label: '一级分类',
-          children: <Table rowKey="primaryCategory" columns={primaryColumns} dataSource={mockPrimaryRows} pagination={false} />,
+          children: <Table rowKey="primaryCategory" columns={primaryColumns} dataSource={primaryRows} pagination={false} />,
         },
         {
           key: 'secondary',
           label: '二级分类',
-          children: <Table rowKey={(row) => `${row.primaryCategory}-${row.secondaryCategory}`} columns={secondaryColumns} dataSource={mockSecondaryRows} pagination={false} scroll={{ x: 920 }} />,
+          children: <Table rowKey={(row) => `${row.primaryCategory}-${row.secondaryCategory}`} columns={secondaryColumns} dataSource={secondaryRows} pagination={false} scroll={{ x: 920 }} />,
         },
         {
           key: 'combined',
           label: '一级 + 二级综合',
-          children: <Table rowKey={(row) => `${row.primaryCategory}-${row.secondaryCategory}`} columns={combinedColumns} dataSource={mockCombinedRows} pagination={false} scroll={{ x: 1280 }} />,
+          children: <Table rowKey={(row) => `${row.primaryCategory}-${row.secondaryCategory}`} columns={combinedColumns} dataSource={combinedRows} pagination={false} scroll={{ x: 1280 }} />,
         },
       ]}
     />

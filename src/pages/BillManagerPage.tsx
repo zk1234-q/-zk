@@ -1,14 +1,16 @@
 import { Button, Typography } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import BillManagerTable from '../components/BillManager/BillManagerTable';
-import { mockMonthlyBills } from '../mock/bills';
+import type { MonthlyBill } from '../types/bill';
 
 interface BillManagerPageProps {
+  monthlyBills: MonthlyBill[];
   onUpload: () => void;
-  onOpenAnalysis: () => void;
+  onOpenAnalysis: (month: string) => void;
+  onDeleteMonth: (month: string) => void;
 }
 
-export default function BillManagerPage({ onUpload, onOpenAnalysis }: BillManagerPageProps) {
+export default function BillManagerPage({ monthlyBills, onUpload, onOpenAnalysis, onDeleteMonth }: BillManagerPageProps) {
   return (
     <div className="page-stack">
       <div className="section-header">
@@ -21,7 +23,7 @@ export default function BillManagerPage({ onUpload, onOpenAnalysis }: BillManage
         </Button>
       </div>
       <div className="page-section">
-        <BillManagerTable data={mockMonthlyBills} onOpenAnalysis={onOpenAnalysis} />
+        <BillManagerTable data={monthlyBills} onOpenAnalysis={onOpenAnalysis} onDeleteMonth={onDeleteMonth} />
       </div>
     </div>
   );
