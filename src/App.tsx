@@ -29,7 +29,7 @@ export default function App() {
     setMonthlyBills(bills);
 
     if (!selectedMonth && bills.length > 0) {
-      setSelectedMonth(bills[bills.length - 1].month);
+      setSelectedMonth(bills[0].month);
     }
   }, [selectedMonth]);
 
@@ -54,7 +54,7 @@ export default function App() {
     setMonthlyBills(bills);
 
     if (selectedMonth === month) {
-      setSelectedMonth(bills[bills.length - 1]?.month);
+      setSelectedMonth(bills[0]?.month);
     }
   };
 

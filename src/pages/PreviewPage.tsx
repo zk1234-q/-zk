@@ -52,9 +52,9 @@ export default function PreviewPage({ previewFile, onSaved }: PreviewPageProps) 
       await saveMonthlyBill(bill);
     }
 
-    const lastMonth = bills[bills.length - 1].month;
-    message.success(`已保存 ${bills.length} 个月份账单`);
-    await onSaved(lastMonth);
+    const defaultMonth = chooseDefaultAnalysisMonth(bills);
+    message.success(`已保存 ${bills.length} 个月份账单，已进入 ${defaultMonth} 分析`);
+    await onSaved(defaultMonth);
   };
 
   if (!previewFile) {
@@ -95,6 +95,10 @@ export default function PreviewPage({ previewFile, onSaved }: PreviewPageProps) 
       </div>
     </div>
   );
+}
+
+function chooseDefaultAnalysisMonth(bills: MonthlyBill[]): string {
+  return bills.reduce((best, current) => (current.totalExpense > best.totalExpense ? current : best), bills[0]).month;
 }
 
 function buildMonthlyBills(previewFile: ParsedBillFile): MonthlyBill[] {

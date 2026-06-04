@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Empty, Select, Typography } from 'antd';
+import { Alert, Empty, Select, Typography } from 'antd';
 import AnalysisCharts from '../components/AnalysisCharts/AnalysisCharts';
 import AnalysisTables from '../components/AnalysisTables/AnalysisTables';
 import DetailModal from '../components/DetailModal/DetailModal';
@@ -70,6 +70,15 @@ export default function AnalysisPage({ monthlyBills, selectedMonth, onChangeMont
           onChange={onChangeMonth}
         />
       </div>
+      <Alert
+        type={summary.isPartialMonth ? 'warning' : 'info'}
+        showIcon
+        message={
+          summary.isPartialMonth
+            ? `${summary.month} 是非完整月，仅参考。请用右上角月份切换查看其它月份。`
+            : `当前展示 ${summary.month} 的统计数据，可用右上角月份切换。`
+        }
+      />
       <div className="summary-grid">
         <div className="summary-tile">
           <div className="summary-label">月收入</div>

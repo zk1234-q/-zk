@@ -27,7 +27,7 @@ async function getDb() {
 export async function getAllMonthlyBills(): Promise<MonthlyBill[]> {
   const db = await getDb();
   const bills = await db.getAll(MONTHLY_BILL_STORE);
-  return bills.sort((a, b) => a.month.localeCompare(b.month));
+  return bills.sort((a, b) => b.month.localeCompare(a.month));
 }
 
 export async function getMonthlyBill(month: string): Promise<MonthlyBill | undefined> {
