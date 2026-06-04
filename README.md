@@ -6,21 +6,47 @@
 
 ## 当前阶段
 
-当前项目处于设计阶段。
+当前项目已完成设计文档确认和前端基础框架搭建。
 
-在明确开始写代码之前，先完成并确认：
+当前已经具备：
 
-1. `docs/01_PRD.md`
-2. `docs/02_DATA_MODEL.md`
-3. `docs/03_UI_FLOW.md`
-4. `docs/04_TECH_PLAN.md`
-5. `docs/05_TASK_BREAKDOWN.md`
+- React + TypeScript + Vite 基础项目
+- Ant Design 页面壳子
+- 账单管理页
+- 上传页
+- 数据预览页
+- 月度分析页
+- 图表、表格、异常数据、明细弹框静态组件
+
+账单解析、标准化、统计计算、IndexedDB 保存等业务功能尚未实现。
+
+## 本地运行
+
+安装依赖：
+
+```bash
+npm install
+```
+
+启动开发服务：
+
+```bash
+npm run dev
+```
+
+构建检查：
+
+```bash
+npm run build
+```
 
 ## 目录结构
 
 ```text
 expense-bill-analyzer/
 ├─ AGENTS.md
+├─ index.html
+├─ package.json
 ├─ docs/
 │  ├─ 01_PRD.md
 │  ├─ 02_DATA_MODEL.md
@@ -28,6 +54,14 @@ expense-bill-analyzer/
 │  ├─ 04_TECH_PLAN.md
 │  └─ 05_TASK_BREAKDOWN.md
 ├─ src/
+│  ├─ components/
+│  ├─ constants/
+│  ├─ mock/
+│  ├─ pages/
+│  ├─ types/
+│  ├─ utils/
+│  ├─ App.tsx
+│  └─ main.tsx
 └─ README.md
 ```
 
