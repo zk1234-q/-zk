@@ -15,8 +15,8 @@
 | 表格 | Ant Design Table | 开箱即用，排序、弹框、布局组件完整 |
 | Excel 解析 | xlsx | 支持 Excel 和 CSV，使用广泛 |
 | 状态管理 | React Context 或 Zustand | 第一版状态不复杂，避免过度设计 |
-| 图表 | Recharts 或 ECharts | 后续增加图表时使用，第一版可先不接入 |
-| 本地存储 | localStorage 或 IndexedDB | 第一版数据量小可用 localStorage，后续大数据量再换 IndexedDB |
+| 图表 | Recharts | React 项目里使用简单，适合做基础趋势图、占比图和排行图 |
+| 本地存储 | IndexedDB | 适合保存每月账单明细，容量比 localStorage 更合适 |
 | 样式 | Ant Design | 和表格、弹框组件一致，降低样式成本 |
 
 ## 推荐选择
@@ -27,15 +27,17 @@
 - Vite
 - Ant Design
 - xlsx
+- Recharts
 - React Context
-- localStorage
+- IndexedDB
 
 原因：
 
 - 对新手更友好
 - 组件开箱即用
 - 不需要自己写复杂表格和弹框样式
-- 后续如果数据量变大，再切换 IndexedDB 和更强状态管理
+- Recharts 能满足第一版基础图表需求，不需要引入复杂图表配置
+- IndexedDB 更适合保存每月账单明细，方便后续做月份对比
 
 ## 项目目录结构
 
@@ -45,11 +47,15 @@ expense-bill-analyzer/
 ├─ src/
 │  ├─ components/
 │  │  ├─ UploadBill/
+│  │  ├─ BillManager/
 │  │  ├─ DataPreview/
+│  │  ├─ AnalysisCharts/
 │  │  ├─ AnalysisTables/
+│  │  ├─ AbnormalTable/
 │  │  └─ DetailModal/
 │  ├─ pages/
 │  │  ├─ UploadPage.tsx
+│  │  ├─ BillManagerPage.tsx
 │  │  ├─ PreviewPage.tsx
 │  │  └─ AnalysisPage.tsx
 │  ├─ types/
@@ -58,6 +64,8 @@ expense-bill-analyzer/
 │  │  ├─ parseBillFile.ts
 │  │  ├─ normalizeBill.ts
 │  │  ├─ calculateSummary.ts
+│  │  ├─ calculateCharts.ts
+│  │  ├─ billStorage.ts
 │  │  └─ format.ts
 │  ├─ constants/
 │  │  └─ bill.ts
@@ -75,10 +83,13 @@ expense-bill-analyzer/
 2. `xlsx` 读取文件内容
 3. 系统转换为原始账单数组
 4. 字段映射为标准账单数组
-5. 过滤出计入统计的支出记录
-6. 根据月份、一级分类、二级分类计算表格数据
-7. 页面展示分析结果
-8. 点击金额时，根据当前月份和分类条件筛选明细
+5. 标记异常记录和不计入统计的记录
+6. 用户确认后把该月份账单保存到 IndexedDB
+7. 过滤出计入统计的支出记录
+8. 根据月份、一级分类、二级分类计算表格数据
+9. 根据汇总结果生成图表数据
+10. 页面展示分析结果
+11. 点击金额时，根据当前月份和分类条件筛选明细
 
 ## 文件上传解析流程
 
@@ -90,6 +101,8 @@ expense-bill-analyzer/
 6. 生成原始账单预览
 7. 转换为标准账单
 8. 标记异常记录
+9. 用户确认后保存到 IndexedDB
+10. 同月份重复上传时提示是否覆盖
 
 ## 表格计算逻辑
 
@@ -101,13 +114,38 @@ expense-bill-analyzer/
 - `calculatePrimaryCategoryRows`
 - `calculateSecondaryCategoryRows`
 - `calculateCombinedCategoryRows`
+- `calculateMonthlyExpenseTrend`
+- `calculatePrimaryCategoryChart`
+- `calculateSecondaryCategoryRanking`
 
 页面只负责：
 
 - 接收数据
 - 调用计算函数
 - 渲染表格
+- 渲染图表
 - 处理点击事件
+
+## IndexedDB 本地存储逻辑
+
+本地历史账单保存到 IndexedDB。
+
+建议拆分为：
+
+- `saveMonthlyBill`
+- `getMonthlyBill`
+- `getAllMonthlyBills`
+- `deleteMonthlyBill`
+- `checkMonthlyBillExists`
+
+存储规则：
+
+- 以月份 `YYYY-MM` 作为主要查询字段
+- 保存标准化账单和异常记录
+- 保存上传文件名、上传时间、支出笔数、总支出、异常记录数
+- 同月份重复保存前必须弹出覆盖确认
+
+IndexedDB 只保存到当前浏览器，不上传服务器，不跨设备同步。
 
 ## 弹框明细筛选逻辑
 
