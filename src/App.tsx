@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { BarChartOutlined, FileSearchOutlined, FolderOpenOutlined, UploadOutlined } from '@ant-design/icons';
-import { Button, Layout, Menu, Typography } from 'antd';
+import { Button, ConfigProvider, Layout, Menu, Typography } from 'antd';
 import type { MenuProps } from 'antd';
 import AnalysisPage from './pages/AnalysisPage';
 import BillManagerPage from './pages/BillManagerPage';
@@ -85,28 +85,56 @@ export default function App() {
   };
 
   return (
-    <Layout className="app-shell">
-      <Layout.Sider width={224} className="app-sider">
-        <div className="app-brand">
-          <Typography.Title level={4}>账单分析</Typography.Title>
-          <Typography.Text type="secondary">Expense Bill Analyzer</Typography.Text>
-        </div>
-        <Menu
-          selectedKeys={[currentPage]}
-          mode="inline"
-          items={pageItems}
-          onClick={({ key }) => setCurrentPage(key as PageKey)}
-        />
-      </Layout.Sider>
-      <Layout>
-        <Layout.Header className="app-header">
-          <Typography.Title level={3}>消费账单分析工具</Typography.Title>
-          <Button icon={<UploadOutlined />} type="primary" onClick={() => setCurrentPage('upload')}>
-            上传账单
-          </Button>
-        </Layout.Header>
-        <Layout.Content className="app-content">{renderPageContent()}</Layout.Content>
+    <ConfigProvider
+      theme={{
+        token: {
+          colorPrimary: '#1d5fd6',
+          borderRadius: 8,
+          colorBgLayout: '#f3f5f8',
+          fontFamily: 'Inter, "Segoe UI", "Microsoft YaHei", Arial, sans-serif',
+        },
+        components: {
+          Table: {
+            headerBg: '#f8fafc',
+            headerColor: '#1f2937',
+            rowHoverBg: '#f4f7fb',
+          },
+          Menu: {
+            itemBorderRadius: 8,
+          },
+        },
+      }}
+    >
+      <Layout className="app-shell">
+        <Layout.Sider width={236} className="app-sider">
+          <div className="app-brand">
+            <div className="brand-mark">账</div>
+            <div>
+              <Typography.Title level={4}>账单分析</Typography.Title>
+              <Typography.Text type="secondary">Expense Bill Analyzer</Typography.Text>
+            </div>
+          </div>
+          <Menu
+            className="app-menu"
+            selectedKeys={[currentPage]}
+            mode="inline"
+            items={pageItems}
+            onClick={({ key }) => setCurrentPage(key as PageKey)}
+          />
+        </Layout.Sider>
+        <Layout>
+          <Layout.Header className="app-header">
+            <div>
+              <Typography.Title level={3}>消费账单分析工具</Typography.Title>
+              <Typography.Text type="secondary">本地解析、按月保存、表格核对、图表辅助</Typography.Text>
+            </div>
+            <Button icon={<UploadOutlined />} type="primary" onClick={() => setCurrentPage('upload')}>
+              上传账单
+            </Button>
+          </Layout.Header>
+          <Layout.Content className="app-content">{renderPageContent()}</Layout.Content>
+        </Layout>
       </Layout>
-    </Layout>
+    </ConfigProvider>
   );
 }

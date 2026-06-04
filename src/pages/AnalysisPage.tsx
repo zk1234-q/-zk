@@ -58,17 +58,20 @@ export default function AnalysisPage({ monthlyBills, selectedMonth, onChangeMont
 
   return (
     <div className="page-stack">
-      <div className="section-header">
+      <div className="page-title-row">
         <div>
-          <Typography.Title level={4}>月度分析</Typography.Title>
-          <Typography.Text type="secondary">当前月份：{summary.month}</Typography.Text>
+          <Typography.Title level={3}>月度分析</Typography.Title>
+          <Typography.Text type="secondary">表格用于核对金额，图表用于观察结构和趋势</Typography.Text>
         </div>
-        <Select
-          value={summary.month}
-          style={{ width: 160 }}
-          options={monthlyRows.map((row) => ({ value: row.month, label: row.month }))}
-          onChange={onChangeMonth}
-        />
+        <div className="month-switcher">
+          <span>当前月份</span>
+          <Select
+            value={summary.month}
+            style={{ width: 160 }}
+            options={monthlyRows.map((row) => ({ value: row.month, label: row.month }))}
+            onChange={onChangeMonth}
+          />
+        </div>
       </div>
       <Alert
         type={summary.isPartialMonth ? 'warning' : 'info'}
@@ -97,8 +100,13 @@ export default function AnalysisPage({ monthlyBills, selectedMonth, onChangeMont
           <div className="summary-value">{formatPercent(summary.balanceRate)}</div>
         </div>
       </div>
-      <AnalysisCharts trendData={trendData} primaryData={primaryChartData} secondaryData={secondaryRankingData} />
-      <div className="page-section">
+      <div className="page-section analysis-table-section">
+        <div className="section-header">
+          <div>
+            <Typography.Title level={4}>明细分析表</Typography.Title>
+            <Typography.Text type="secondary">点击金额可查看对应消费明细</Typography.Text>
+          </div>
+        </div>
         <AnalysisTables
           monthlyRows={monthlyRows}
           primaryRows={primaryRows}
@@ -123,6 +131,15 @@ export default function AnalysisPage({ monthlyBills, selectedMonth, onChangeMont
             })
           }
         />
+      </div>
+      <div className="visual-section">
+        <div className="section-header">
+          <div>
+            <Typography.Title level={4}>可视化分析</Typography.Title>
+            <Typography.Text type="secondary">辅助查看月份趋势、一级占比和二级排行</Typography.Text>
+          </div>
+        </div>
+        <AnalysisCharts trendData={trendData} primaryData={primaryChartData} secondaryData={secondaryRankingData} />
       </div>
       <DetailModal records={allRecords} filter={detailFilter} open={detailOpen} onClose={() => setDetailOpen(false)} />
     </div>

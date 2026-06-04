@@ -2,7 +2,7 @@ import { Empty } from 'antd';
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { MonthlyExpenseTrendPoint, PrimaryCategoryChartPoint, SecondaryCategoryRankingPoint } from '../../types/bill';
 
-const chartColors = ['#2563eb', '#16a34a', '#f59e0b', '#dc2626', '#7c3aed'];
+const chartColors = ['#1d5fd6', '#0f9f6e', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#be123c'];
 
 interface AnalysisChartsProps {
   trendData: MonthlyExpenseTrendPoint[];
@@ -20,11 +20,11 @@ export default function AnalysisCharts({ trendData, primaryData, secondaryData }
         {trendData.length > 0 ? (
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={trendData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
+              <CartesianGrid stroke="#e6ebf2" strokeDasharray="3 3" />
+              <XAxis dataKey="month" tickLine={false} axisLine={{ stroke: '#cbd5e1' }} />
+              <YAxis tickLine={false} axisLine={{ stroke: '#cbd5e1' }} />
               <Tooltip />
-              <Bar dataKey="totalExpense" name="月总支出" fill="#2563eb" />
+              <Bar dataKey="totalExpense" name="月总支出" fill="#1d5fd6" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         ) : (
@@ -38,7 +38,7 @@ export default function AnalysisCharts({ trendData, primaryData, secondaryData }
         {primaryData.length > 0 ? (
           <ResponsiveContainer width="100%" height={260}>
             <PieChart>
-              <Pie data={primaryData} dataKey="amount" nameKey="name" outerRadius={90} label>
+              <Pie data={primaryData} dataKey="amount" nameKey="name" outerRadius={88} innerRadius={42} label>
                 {primaryData.map((entry, index) => (
                   <Cell key={entry.name} fill={chartColors[index % chartColors.length]} />
                 ))}
@@ -57,12 +57,12 @@ export default function AnalysisCharts({ trendData, primaryData, secondaryData }
         </div>
         {secondaryData.length > 0 ? (
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={secondaryData} layout="vertical" margin={{ left: 60 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" />
-              <YAxis dataKey="name" type="category" />
+            <BarChart data={secondaryData} layout="vertical" margin={{ left: 68 }}>
+              <CartesianGrid stroke="#e6ebf2" strokeDasharray="3 3" />
+              <XAxis type="number" tickLine={false} axisLine={{ stroke: '#cbd5e1' }} />
+              <YAxis dataKey="name" type="category" tickLine={false} axisLine={{ stroke: '#cbd5e1' }} />
               <Tooltip />
-              <Bar dataKey="amount" name="二级金额" fill="#16a34a" />
+              <Bar dataKey="amount" name="二级金额" fill="#0f9f6e" radius={[0, 6, 6, 0]} />
             </BarChart>
           </ResponsiveContainer>
         ) : (
