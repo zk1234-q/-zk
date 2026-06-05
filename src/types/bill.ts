@@ -3,6 +3,7 @@ export type RawBillRecord = Record<string, unknown>;
 export interface StandardBillRecord {
   id: string;
   rawIndex: number;
+  rawRecord?: RawBillRecord;
   date: string;
   month: string;
   type: string;

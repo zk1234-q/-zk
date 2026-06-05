@@ -91,6 +91,7 @@ export function normalizeBillFile(fileName: string, rawRecords: RawBillRecord[])
     records.push({
       id: `bill-${rawIndex}`,
       rawIndex,
+      rawRecord,
       date: date.date,
       month: date.month,
       type,

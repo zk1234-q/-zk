@@ -57,6 +57,8 @@ export function calculatePrimaryCategoryRows(records: StandardBillRecord[], mont
 export function calculateSecondaryCategoryRows(records: StandardBillRecord[], month: string, income = DEFAULT_MONTHLY_INCOME): SecondaryCategoryRow[] {
   const expenseRecords = getExpenseRecords(records, month);
   const totalExpense = sumAmount(expenseRecords);
+  const primaryRows = calculatePrimaryCategoryRows(records, month, income);
+  const primaryRankMap = new Map(primaryRows.map((row, index) => [row.primaryCategory, index]));
   const grouped = groupBy(expenseRecords, (record) => `${record.primaryCategory}||${record.secondaryCategory}`);
 
   return Array.from(grouped.entries())
@@ -73,30 +75,37 @@ export function calculateSecondaryCategoryRows(records: StandardBillRecord[], mo
         remark: '',
       };
     })
-    .sort((a, b) => b.secondaryAmount - a.secondaryAmount);
+    .sort((a, b) => {
+      const primaryDiff = (primaryRankMap.get(a.primaryCategory) ?? Number.MAX_SAFE_INTEGER) - (primaryRankMap.get(b.primaryCategory) ?? Number.MAX_SAFE_INTEGER);
+
+      if (primaryDiff !== 0) {
+        return primaryDiff;
+      }
+
+      return b.secondaryAmount - a.secondaryAmount;
+    });
 }
 
 export function calculateCombinedCategoryRows(records: StandardBillRecord[], month: string, income = DEFAULT_MONTHLY_INCOME): CombinedCategoryRow[] {
   const primaryRows = calculatePrimaryCategoryRows(records, month, income);
   const secondaryRows = calculateSecondaryCategoryRows(records, month, income);
 
-  return secondaryRows.map((secondaryRow) => {
-    const primaryRow = primaryRows.find((item) => item.primaryCategory === secondaryRow.primaryCategory);
-    const primaryAmount = primaryRow?.primaryAmount ?? 0;
-
-    return {
-      primaryCategory: secondaryRow.primaryCategory,
-      secondaryCategory: secondaryRow.secondaryCategory,
-      primaryAmount,
-      primaryExpenseRatio: primaryRow?.primaryExpenseRatio ?? 0,
-      secondaryAmount: secondaryRow.secondaryAmount,
-      secondaryExpenseRatio: secondaryRow.secondaryExpenseRatio,
-      secondaryPrimaryRatio: primaryAmount === 0 ? 0 : secondaryRow.secondaryAmount / primaryAmount,
-      primaryIncomeRatio: primaryRow?.primaryIncomeRatio ?? 0,
-      secondaryIncomeRatio: secondaryRow.secondaryIncomeRatio,
-      secondaryCount: secondaryRow.count,
-    };
-  });
+  return primaryRows.flatMap((primaryRow) =>
+    secondaryRows
+      .filter((secondaryRow) => secondaryRow.primaryCategory === primaryRow.primaryCategory)
+      .map((secondaryRow) => ({
+        primaryCategory: secondaryRow.primaryCategory,
+        secondaryCategory: secondaryRow.secondaryCategory,
+        primaryAmount: primaryRow.primaryAmount,
+        primaryExpenseRatio: primaryRow.primaryExpenseRatio,
+        secondaryAmount: secondaryRow.secondaryAmount,
+        secondaryExpenseRatio: secondaryRow.secondaryExpenseRatio,
+        secondaryPrimaryRatio: primaryRow.primaryAmount === 0 ? 0 : secondaryRow.secondaryAmount / primaryRow.primaryAmount,
+        primaryIncomeRatio: primaryRow.primaryIncomeRatio,
+        secondaryIncomeRatio: secondaryRow.secondaryIncomeRatio,
+        secondaryCount: secondaryRow.count,
+      })),
+  );
 }
 
 export function filterDetailRecords(records: StandardBillRecord[], month: string, primaryCategory?: string, secondaryCategory?: string): StandardBillRecord[] {
@@ -136,9 +145,15 @@ function isPartialMonth(month: string, records: StandardBillRecord[]): boolean {
     return false;
   }
 
-  const days = new Set(records.map((record) => record.date));
   const [year, monthNumber] = month.split('-').map(Number);
-  const daysInMonth = new Date(year, monthNumber, 0).getDate();
 
-  return days.size < daysInMonth;
+  if (!year || !monthNumber) {
+    return false;
+  }
+
+  const billMonthStart = new Date(year, monthNumber - 1, 1);
+  const currentDate = new Date();
+  const currentMonthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+
+  return billMonthStart >= currentMonthStart;
 }

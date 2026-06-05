@@ -24,11 +24,13 @@ export function calculatePrimaryCategoryChart(rows: PrimaryCategoryRow[]): Prima
 }
 
 export function calculateSecondaryCategoryRanking(rows: SecondaryCategoryRow[]): SecondaryCategoryRankingPoint[] {
-  return rows.map((row) => ({
-    name: `${row.primaryCategory}-${row.secondaryCategory}`,
-    primaryCategory: row.primaryCategory,
-    secondaryCategory: row.secondaryCategory,
-    amount: row.secondaryAmount,
-    ratio: row.secondaryExpenseRatio,
-  }));
+  return [...rows]
+    .sort((a, b) => b.secondaryAmount - a.secondaryAmount)
+    .map((row) => ({
+      name: `${row.primaryCategory}-${row.secondaryCategory}`,
+      primaryCategory: row.primaryCategory,
+      secondaryCategory: row.secondaryCategory,
+      amount: row.secondaryAmount,
+      ratio: row.secondaryExpenseRatio,
+    }));
 }

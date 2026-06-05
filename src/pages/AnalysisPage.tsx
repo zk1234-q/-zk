@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Empty, Select, Typography } from 'antd';
+import { Empty, Select, Tag, Typography } from 'antd';
 import AnalysisCharts from '../components/AnalysisCharts/AnalysisCharts';
 import AnalysisTables from '../components/AnalysisTables/AnalysisTables';
 import DetailModal from '../components/DetailModal/DetailModal';
@@ -71,17 +71,9 @@ export default function AnalysisPage({ monthlyBills, selectedMonth, onChangeMont
             options={monthlyRows.map((row) => ({ value: row.month, label: row.month }))}
             onChange={onChangeMonth}
           />
+          {summary.isPartialMonth ? <Tag color="warning">非完整月</Tag> : null}
         </div>
       </div>
-      <Alert
-        type={summary.isPartialMonth ? 'warning' : 'info'}
-        showIcon
-        message={
-          summary.isPartialMonth
-            ? `${summary.month} 是非完整月，仅参考。请用右上角月份切换查看其它月份。`
-            : `当前展示 ${summary.month} 的统计数据，可用右上角月份切换。`
-        }
-      />
       <div className="summary-grid">
         <div className="summary-tile">
           <div className="summary-label">月收入</div>
@@ -104,7 +96,7 @@ export default function AnalysisPage({ monthlyBills, selectedMonth, onChangeMont
         <div className="section-header">
           <div>
             <Typography.Title level={4}>明细分析表</Typography.Title>
-            <Typography.Text type="secondary">点击金额可查看对应消费明细</Typography.Text>
+            <Typography.Text type="secondary">点击二级支出金额可查看对应消费明细</Typography.Text>
           </div>
         </div>
         <AnalysisTables
@@ -113,14 +105,6 @@ export default function AnalysisPage({ monthlyBills, selectedMonth, onChangeMont
           secondaryRows={secondaryRows}
           combinedRows={combinedRows}
           onOpenMonthlyDetail={openMonthlyDetail}
-          onOpenPrimaryDetail={(primaryCategory, amount) =>
-            openDetail({
-              month: currentMonth,
-              primaryCategory,
-              title: `${currentMonth} ${primaryCategory}消费明细`,
-              expectedAmount: amount,
-            })
-          }
           onOpenSecondaryDetail={(primaryCategory, secondaryCategory, amount) =>
             openDetail({
               month: currentMonth,
