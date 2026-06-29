@@ -1,4 +1,5 @@
-import { Button, Tabs, Table } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
+import { Button, Select, Tabs, Table } from 'antd';
 import type { TableColumnsType } from 'antd';
 import type { CombinedCategoryRow, MonthlySummaryRow, PrimaryCategoryRow, SecondaryCategoryRow } from '../../types/bill';
 import { formatAmount, formatPercent } from '../../utils/format';
@@ -9,7 +10,19 @@ interface AnalysisTablesProps {
   secondaryRows: SecondaryCategoryRow[];
   combinedRows: CombinedCategoryRow[];
   onOpenMonthlyDetail: (row: MonthlySummaryRow) => void;
+  onOpenPrimaryDetail: (primaryCategory: string, amount: number, budgetInfo: NonNullable<PrimaryCategoryRow['budgetStatus']> extends never ? never : DetailBudgetInfo) => void;
   onOpenSecondaryDetail: (primaryCategory: string, secondaryCategory: string, amount: number) => void;
+}
+
+interface DetailBudgetInfo {
+  categoryName: string;
+  budgetAmount?: number;
+  spentAmount: number;
+  remainingAmount?: number;
+  overBudgetAmount?: number;
+  usageRate?: number;
+  status: 'none' | 'normal' | 'warning' | 'over' | 'unmatched';
+  overBudgetNote?: string;
 }
 
 export default function AnalysisTables({
@@ -18,8 +31,25 @@ export default function AnalysisTables({
   secondaryRows,
   combinedRows,
   onOpenMonthlyDetail,
+  onOpenPrimaryDetail,
   onOpenSecondaryDetail,
 }: AnalysisTablesProps) {
+  const yearOptions = useMemo(() => Array.from(new Set(monthlyRows.map((row) => row.month.slice(0, 4)))).sort((a, b) => b.localeCompare(a)), [monthlyRows]);
+  const [selectedYear, setSelectedYear] = useState<string>();
+  const currentYear = selectedYear ?? yearOptions[0];
+  const filteredMonthlyRows = currentYear ? monthlyRows.filter((row) => row.month.startsWith(`${currentYear}-`)) : monthlyRows;
+
+  useEffect(() => {
+    if (yearOptions.length === 0) {
+      setSelectedYear(undefined);
+      return;
+    }
+
+    if (!selectedYear || !yearOptions.includes(selectedYear)) {
+      setSelectedYear(yearOptions[0]);
+    }
+  }, [selectedYear, yearOptions]);
+
   const getCombinedRowSpan = (index: number) => {
     const current = combinedRows[index];
 
@@ -64,8 +94,14 @@ export default function AnalysisTables({
       key: 'primaryAmount',
       align: 'right',
       sorter: (a, b) => a.primaryAmount - b.primaryAmount,
-      render: (value: number) => formatAmount(value),
+      render: (value: number, row) => (
+        <Button className={getBudgetAmountClass(row.budgetStatus)} type="link" onClick={() => onOpenPrimaryDetail(row.primaryCategory, value, buildBudgetInfo(row.primaryCategory, value, row))}>
+          {formatAmount(value)}
+        </Button>
+      ),
     },
+    { title: '预算', dataIndex: 'budgetAmount', key: 'budgetAmount', align: 'right', render: (value?: number) => (typeof value === 'number' ? formatAmount(value) : '-') },
+    { title: '剩余预算', dataIndex: 'remainingBudgetAmount', key: 'remainingBudgetAmount', align: 'right', render: (value?: number) => (typeof value === 'number' ? <span className={value < 0 ? 'amount-danger' : ''}>{formatAmount(value)}</span> : '-') },
     { title: '占总支出', dataIndex: 'primaryExpenseRatio', key: 'primaryExpenseRatio', align: 'right', render: (value: number) => formatPercent(value) },
     { title: '占收入', dataIndex: 'primaryIncomeRatio', key: 'primaryIncomeRatio', align: 'right', render: (value: number) => formatPercent(value) },
     { title: '笔数', dataIndex: 'count', key: 'count', align: 'right' },
@@ -109,7 +145,11 @@ export default function AnalysisTables({
       key: 'primaryAmount',
       align: 'right',
       render: (value: number, row, index) => ({
-        children: formatAmount(value),
+        children: (
+          <Button className={getBudgetAmountClass(row.budgetStatus)} type="link" onClick={() => onOpenPrimaryDetail(row.primaryCategory, value, buildBudgetInfo(row.primaryCategory, value, row))}>
+            {formatAmount(value)}
+          </Button>
+        ),
         props: { rowSpan: getCombinedRowSpan(index) },
       }),
     },
@@ -156,7 +196,26 @@ export default function AnalysisTables({
         {
           key: 'monthly',
           label: '月度汇总',
-          children: <Table rowKey="month" columns={monthlyColumns} dataSource={monthlyRows} pagination={false} scroll={{ x: 980 }} />,
+          children: (
+            <>
+              <div className="table-toolbar">
+                <span>年份</span>
+                <Select
+                  value={currentYear}
+                  style={{ width: 120 }}
+                  options={yearOptions.map((year) => ({ value: year, label: year }))}
+                  onChange={setSelectedYear}
+                />
+              </div>
+              <Table
+                rowKey="month"
+                columns={monthlyColumns}
+                dataSource={filteredMonthlyRows}
+                pagination={{ pageSize: 12, showSizeChanger: false }}
+                scroll={{ x: 980 }}
+              />
+            </>
+          ),
         },
         {
           key: 'primary',
@@ -176,4 +235,29 @@ export default function AnalysisTables({
       ]}
     />
   );
+}
+
+function getBudgetAmountClass(status?: string): string {
+  if (status === 'over') {
+    return 'amount-danger';
+  }
+
+  if (status === 'warning') {
+    return 'amount-warning';
+  }
+
+  return '';
+}
+
+function buildBudgetInfo(primaryCategory: string, amount: number, row: PrimaryCategoryRow | CombinedCategoryRow): DetailBudgetInfo {
+  return {
+    categoryName: primaryCategory,
+    budgetAmount: row.budgetAmount,
+    spentAmount: amount,
+    remainingAmount: row.remainingBudgetAmount,
+    overBudgetAmount: row.overBudgetAmount,
+    usageRate: row.budgetUsageRate,
+    status: row.budgetStatus ?? 'none',
+    overBudgetNote: row.overBudgetNote,
+  };
 }

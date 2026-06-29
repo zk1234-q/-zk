@@ -31,7 +31,7 @@ export function calculateMonthlySummary(monthlyBills: MonthlyBill[], income = DE
         remark: isPartialMonth(bill.month, expenseRecords) ? '非完整月，仅参考' : '',
       };
     })
-    .sort((a, b) => a.month.localeCompare(b.month));
+    .sort((a, b) => b.month.localeCompare(a.month));
 }
 
 export function calculatePrimaryCategoryRows(records: StandardBillRecord[], month: string, income = DEFAULT_MONTHLY_INCOME): PrimaryCategoryRow[] {

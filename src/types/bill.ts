@@ -43,6 +43,9 @@ export interface MonthlyBill {
   totalExpense: number;
   expenseCount: number;
   abnormalCount: number;
+  rawRowCount?: number;
+  validExpenseRowCount?: number;
+  abnormalRowCount?: number;
 }
 
 export interface ParsedBillFile {
@@ -72,6 +75,12 @@ export interface PrimaryCategoryRow {
   primaryIncomeRatio: number;
   count: number;
   remark: string;
+  budgetAmount?: number;
+  remainingBudgetAmount?: number;
+  budgetUsageRate?: number;
+  budgetStatus?: 'none' | 'normal' | 'warning' | 'over' | 'unmatched';
+  overBudgetAmount?: number;
+  overBudgetNote?: string;
 }
 
 export interface SecondaryCategoryRow {
@@ -95,6 +104,12 @@ export interface CombinedCategoryRow {
   primaryIncomeRatio: number;
   secondaryIncomeRatio: number;
   secondaryCount: number;
+  budgetAmount?: number;
+  remainingBudgetAmount?: number;
+  budgetUsageRate?: number;
+  budgetStatus?: 'none' | 'normal' | 'warning' | 'over' | 'unmatched';
+  overBudgetAmount?: number;
+  overBudgetNote?: string;
 }
 
 export interface MonthlyExpenseTrendPoint {
@@ -122,4 +137,14 @@ export interface DetailFilter {
   secondaryCategory?: string;
   title: string;
   expectedAmount: number;
+  budgetInfo?: {
+    categoryName: string;
+    budgetAmount?: number;
+    spentAmount: number;
+    remainingAmount?: number;
+    overBudgetAmount?: number;
+    usageRate?: number;
+    status: 'none' | 'normal' | 'warning' | 'over' | 'unmatched';
+    overBudgetNote?: string;
+  };
 }

@@ -269,3 +269,374 @@
 - 月收入为 0 时，占收入比例和结余率显示为 0
 - 所有百分比展示时保留 1 位小数
 - 所有金额展示时保留 2 位小数
+
+---
+
+# 第二版数据模型：本地增强版（待确认）
+
+## 第二版数据设计目标
+
+第二版在第一版账单数据模型基础上，新增以下本地数据：
+
+1. 用户设置
+2. 账单大类预算
+3. 独立购物预算
+4. 本地数据导出 / 导入备份
+5. 重复月份账单覆盖确认所需的账单摘要字段
+
+第二版仍然是纯本地版本，不引入账号、后端和云端数据库。
+
+## 第二版数据边界
+
+第二版有两类预算，必须分开建模：
+
+| 预算类型 | 是否联动账单 | 说明 |
+| --- | --- | --- |
+| 账单大类预算 | 是 | 按月份和一级分类名称匹配账单支出 |
+| 独立购物预算 | 否 | 用户手工维护购物计划，不读取账单支出 |
+
+账单大类预算用于控制每月实际账单支出。
+
+独立购物预算用于记录用户手工规划的购买清单，例如衣服、鞋子、装备等。
+
+## 用户设置字段
+
+用户设置保存全局默认值。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | string | 固定值，建议使用 `user-settings` |
+| defaultMonthlyIncome | number | 默认月收入，未设置时使用 9000 |
+| currency | string | 货币单位，第二版固定为 `CNY` |
+| updatedAt | string | 最后更新时间，ISO 字符串 |
+
+### 默认月收入口径
+
+- 月度汇总中的 `income` 从 `defaultMonthlyIncome` 读取。
+- 如果 `defaultMonthlyIncome` 为空或无效，使用 9000。
+- 第二版先不做不同月份不同收入。
+
+## 总预算设置字段
+
+总预算设置保存用户的年度和月度总预算目标。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | string | 固定值，建议使用 `budget-settings` |
+| annualExpenseBudget | number | 年支出总预算 |
+| monthlySavingTarget | number | 月攒钱预算金额 |
+| monthlyExpenseBudget | number | 月总支出预算 |
+| updatedAt | string | 最后更新时间，ISO 字符串 |
+
+### 总预算设置口径
+
+- `annualExpenseBudget` 用于展示全年支出目标，第二版先不强制校验每月预算之和。
+- `monthlySavingTarget` 用于月度预算总览和月度结算视图。
+- `monthlyExpenseBudget` 用于月度预算总览。
+
+## 月度大类预算字段
+
+月度大类预算按月份和一级分类管理。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | string | 系统生成的唯一 ID |
+| month | string | 月份，格式 YYYY-MM |
+| categoryName | string | 大类名称，需要和账单一级分类名称匹配 |
+| budgetAmount | number | 该月份该大类预算金额 |
+| spentAmount | number | 已支出金额，根据账单自动计算，不手工保存为最终事实 |
+| remainingAmount | number | 剩余预算金额，计算字段 |
+| usageRate | number | 预算使用率，计算字段 |
+| status | string | `normal`、`warning`、`over`、`unmatched` |
+| overBudgetNote | string | 超支备注 |
+| remark | string | 普通备注 |
+| createdAt | string | 创建时间，ISO 字符串 |
+| updatedAt | string | 更新时间，ISO 字符串 |
+
+### 唯一性规则
+
+同一个月份内，同一个大类名称只能有一条预算记录。
+
+建议唯一键：
+
+```text
+month + normalizedCategoryName
+```
+
+`normalizedCategoryName` 只做去除前后空格，不做模糊匹配。
+
+## 月度大类预算计算字段
+
+`spentAmount`、`remainingAmount`、`usageRate` 和 `status` 可以存储用于页面展示，但计算时需要以当前账单数据重新计算，避免旧数据残留。
+
+### 已支出金额
+
+```text
+已支出金额 = 当前月份内，primaryCategory 等于 categoryName 的支出记录 expenseAmount 合计
+```
+
+匹配规则：
+
+```text
+trim(预算大类名称) = trim(账单一级分类名称)
+```
+
+### 剩余预算金额
+
+```text
+剩余预算金额 = 大类预算金额 - 已支出金额
+```
+
+### 预算使用率
+
+```text
+预算使用率 = 已支出金额 / 大类预算金额
+```
+
+### 状态
+
+| 条件 | status | 说明 |
+| --- | --- | --- |
+| 匹配不到账单分类 | unmatched | 已支出按 0 处理 |
+| 大类预算金额为 0 且已支出金额大于 0 | over | 直接超支 |
+| 预算使用率 < 0.8 | normal | 正常 |
+| 0.8 <= 预算使用率 <= 1 | warning | 接近预算 |
+| 预算使用率 > 1 | over | 已超支 |
+
+## 从账单分类选择大类
+
+当某个月账单已导入时，可以从该月账单数据中提取一级分类选项。
+
+分类选项字段：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| month | string | 月份 |
+| categoryName | string | 一级分类名称 |
+| spentAmount | number | 该分类已支出金额 |
+| count | number | 支出笔数 |
+
+分类选项不需要单独长期保存，可以从当月账单记录实时计算。
+
+## 复制月份预算数据规则
+
+复制月份预算时，只复制用户手工维护字段：
+
+| 字段 | 是否复制 |
+| --- | --- |
+| categoryName | 是 |
+| budgetAmount | 是 |
+| overBudgetNote | 否 |
+| remark | 是 |
+| spentAmount | 否 |
+| remainingAmount | 否 |
+| usageRate | 否 |
+| status | 否 |
+
+复制后：
+
+- `month` 改为目标月份
+- `id` 重新生成
+- `createdAt` 和 `updatedAt` 使用当前时间
+- 目标月份的计算字段按目标月份账单重新计算
+
+如果目标月份已有预算记录，第二版采用整月覆盖策略，覆盖前必须二次确认。
+
+## 月度预算总览字段
+
+月度预算总览是计算结果，不需要作为独立记录保存。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| month | string | 当前月份 |
+| monthlyIncome | number | 默认月收入 |
+| monthlyExpenseBudget | number | 月总支出预算 |
+| currentExpense | number | 当月账单总支出 |
+| remainingExpenseBudget | number | 月总支出预算 - 当前已支出 |
+| monthlySavingTarget | number | 月攒钱预算金额 |
+| expectedSaving | number | 月收入 - 当前已支出 |
+| isSavingTargetMet | boolean | 是否达到月攒钱目标 |
+| budgetUsageRate | number | 当前已支出 / 月总支出预算 |
+
+公式：
+
+```text
+当前剩余预算 = 月总支出预算 - 当前已支出
+预计可攒金额 = 月收入 - 当前已支出
+攒钱目标是否达成 = 预计可攒金额 >= 月攒钱预算金额
+月总预算使用率 = 当前已支出 / 月总支出预算
+```
+
+## 月度结算视图字段
+
+月度结算视图也是计算结果，不单独保存。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| month | string | 当前月份 |
+| isTotalBudgetOver | boolean | 月总支出是否超过月总支出预算 |
+| isSavingTargetMet | boolean | 月攒钱目标是否达成 |
+| overBudgetCategories | MonthlyCategoryBudget[] | 超支大类 |
+| topRemainingCategories | MonthlyCategoryBudget[] | 剩余预算最多的大类 |
+| categoryRows | MonthlyCategoryBudget[] | 全部大类预算结果 |
+
+## 一级分类表预算扩展字段
+
+第二版需要在一级分类统计结果中增加预算状态字段。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| budgetAmount | number | 当前月份该一级分类预算金额 |
+| remainingBudgetAmount | number | 当前月份该一级分类剩余预算 |
+| budgetUsageRate | number | 已支出 / 预算金额 |
+| budgetStatus | string | `none`、`normal`、`warning`、`over` |
+| overBudgetAmount | number | 超出预算金额，未超支时为 0 |
+| overBudgetNote | string | 超支备注 |
+
+说明：
+
+- 未设置预算时，`budgetStatus = none`。
+- 超支时，一级分类金额字段需要标红。
+- 点击一级分类金额时，预算提示信息从这些字段生成。
+
+## 购物预算明细字段
+
+购物预算不和账单联动。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | string | 系统生成的唯一 ID |
+| categoryName | string | 品类，例如裤子、鞋子 |
+| itemName | string | 具体项目，例如冬天厚裤、通勤鞋 |
+| plannedQuantity | number | 计划数量 |
+| purchasedQuantity | number | 已购买数量 |
+| quantityUnit | string | 单位，例如件、条、双 |
+| budgetAmount | number | 该行预算金额 |
+| actualUnitAmount | number | 单件单品实际购买金额 |
+| actualTotalAmount | number | 实际购买小计，计算字段 |
+| categoryRemainingAmount | number | 所属品类剩余预算，计算字段 |
+| purchasedItem | string | 实际购买内容 |
+| recommendedPlan | string | 推荐方案 |
+| status | string | `planned`、`purchased`、`paused`、`abandoned` |
+| priority | string | `must`、`should`、`optional`、`not_now` |
+| remark | string | 备注 |
+| createdAt | string | 创建时间，ISO 字符串 |
+| updatedAt | string | 更新时间，ISO 字符串 |
+
+## 购物预算计算字段
+
+### 实际购买小计
+
+```text
+实际购买小计 = 已购买数量 * 单件单品实际购买金额
+```
+
+### 行是否超支
+
+```text
+行是否超支 = 实际购买小计 > 预算金额
+```
+
+### 品类剩余预算
+
+```text
+品类剩余预算 = 同品类所有行预算金额合计 - 同品类所有行实际购买小计合计
+```
+
+购物预算表每一行显示该行所属品类的剩余预算。
+
+## 购物预算合计字段
+
+购物预算合计是计算结果，不单独保存。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| totalBudgetAmount | number | 总预算金额 |
+| totalActualAmount | number | 总实际购买金额 |
+| totalRemainingAmount | number | 总剩余预算金额 |
+| isOverBudget | boolean | 是否整体超支 |
+
+公式：
+
+```text
+总预算金额 = 所有购物预算行 budgetAmount 合计
+总实际购买金额 = 所有购物预算行 actualTotalAmount 合计
+总剩余预算金额 = 总预算金额 - 总实际购买金额
+```
+
+## 本地历史账单字段扩展
+
+第二版为了支持重复月份覆盖确认，需要在每月账单记录中补充摘要字段。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| rawRowCount | number | 原始文件识别出的总行数 |
+| validExpenseRowCount | number | 计入支出的有效行数 |
+| abnormalRowCount | number | 异常行数 |
+
+说明：
+
+- `validExpenseRowCount` 可以和第一版 `expenseCount` 保持一致。
+- `abnormalRowCount` 可以和第一版 `abnormalCount` 保持一致。
+- 保留这些字段是为了覆盖确认弹窗中对比已保存账单和本次上传账单。
+
+## 本地数据备份文件结构
+
+导出文件建议使用 JSON。
+
+根结构：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| appName | string | 固定为 `expense-bill-analyzer` |
+| schemaVersion | number | 备份结构版本，第二版使用 2 |
+| exportedAt | string | 导出时间，ISO 字符串 |
+| userSettings | UserSettings | 用户设置 |
+| budgetSettings | BudgetSettings | 总预算设置 |
+| monthlyCategoryBudgets | MonthlyCategoryBudget[] | 月度大类预算 |
+| shoppingBudgetItems | ShoppingBudgetItem[] | 购物预算明细 |
+| monthlyBills | MonthlyBill[] | 本地历史账单 |
+
+## 导入校验规则
+
+导入前必须校验：
+
+- `appName` 必须等于 `expense-bill-analyzer`
+- `schemaVersion` 必须存在
+- `userSettings`、`budgetSettings`、`monthlyCategoryBudgets`、`shoppingBudgetItems`、`monthlyBills` 字段必须存在
+- 金额字段必须能解析为数字
+- 月份字段必须符合 `YYYY-MM`
+
+校验失败时，不允许覆盖当前本地数据。
+
+第二版导入采用整包覆盖：
+
+```text
+导入后当前本地数据 = 导入文件中的数据
+```
+
+## 第二版本地存储建议
+
+第二版仍然使用 IndexedDB。
+
+建议新增或扩展以下对象仓库：
+
+| 存储 | 主键 | 说明 |
+| --- | --- | --- |
+| userSettings | id | 默认月收入等用户设置 |
+| budgetSettings | id | 总预算设置 |
+| monthlyCategoryBudgets | id | 月度大类预算 |
+| shoppingBudgetItems | id | 购物预算明细 |
+| monthlyBills | month | 每月账单 |
+
+## 第二版计算边界
+
+- 所有金额内部使用 `number`。
+- 金额展示保留 2 位小数。
+- 百分比展示保留 1 位小数。
+- 预算金额为空时按 0 处理。
+- 已购买数量为空时按 0 处理。
+- 单件实际购买金额为空时按 0 处理。
+- 大类预算金额为 0 且已支出大于 0 时，视为超支。
+- 月总支出预算为 0 时，月总预算使用率显示为 0，避免除以 0。
+- 默认月收入为 0 时，结余率和占收入比例显示为 0。

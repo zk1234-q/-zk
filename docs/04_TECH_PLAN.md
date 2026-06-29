@@ -182,3 +182,394 @@ IndexedDB 只保存到当前浏览器，不上传服务器，不跨设备同步�
 - 权限系统
 - 复杂图表
 - 自动分类训练
+
+---
+
+# 第二版技术方案：本地增强版（待确认）
+
+## 第二版技术方案目标
+
+第二版继续使用纯前端本地方案，不引入后端、账号登录和云端数据库。
+
+第二版重点是：
+
+1. 新增设置能力
+2. 新增账单大类预算
+3. 新增独立购物预算
+4. 新增本地数据导出 / 导入
+5. 优化重复月份账单覆盖确认
+6. 在月度分析页联动预算状态
+
+## 第二版技术栈选择
+
+继续沿用第一版技术栈：
+
+| 模块 | 方案 | 第二版用途 |
+| --- | --- | --- |
+| React + TypeScript | 保持不变 | 页面和组件开发 |
+| Vite | 保持不变 | 本地开发和构建 |
+| Ant Design | 保持不变 | 表格、表单、弹框、按钮、提示 |
+| xlsx | 保持不变 | 账单 Excel / CSV 解析 |
+| Recharts | 保持不变 | 如后续需要预算图表可复用 |
+| IndexedDB | 保持不变 | 保存账单、设置、预算、购物预算 |
+
+第二版不新增后端技术栈。
+
+## 新增目录结构建议
+
+```text
+src/
+├─ components/
+│  ├─ BudgetManager/
+│  │  ├─ BudgetSettingsPanel.tsx
+│  │  ├─ MonthlyBudgetOverview.tsx
+│  │  ├─ MonthlyCategoryBudgetTable.tsx
+│  │  ├─ CopyBudgetModal.tsx
+│  │  ├─ MonthlyBudgetSettlement.tsx
+│  │  └─ ShoppingBudgetTable.tsx
+│  ├─ Settings/
+│  │  ├─ IncomeSettingsPanel.tsx
+│  │  ├─ DataExportPanel.tsx
+│  │  ├─ DataImportPanel.tsx
+│  │  └─ ImportConfirmModal.tsx
+│  └─ UploadBill/
+│     └─ OverwriteBillModal.tsx
+├─ pages/
+│  ├─ BudgetPage.tsx
+│  └─ SettingsPage.tsx
+├─ types/
+│  ├─ budget.ts
+│  └─ settings.ts
+├─ utils/
+│  ├─ budgetStorage.ts
+│  ├─ settingsStorage.ts
+│  ├─ backupStorage.ts
+│  ├─ calculateBudget.ts
+│  └─ budgetFormat.ts
+```
+
+说明：
+
+- 预算相关类型放在 `types/budget.ts`。
+- 设置相关类型放在 `types/settings.ts`。
+- 预算计算逻辑放在 `utils/calculateBudget.ts`，不写进页面组件。
+- 本地保存逻辑按业务拆成 `budgetStorage.ts`、`settingsStorage.ts`、`backupStorage.ts`。
+
+## 第二版数据流转
+
+### 默认月收入设置
+
+1. 设置页读取 `userSettings`
+2. 用户修改默认月收入
+3. 保存到 IndexedDB
+4. 月度分析页读取默认月收入
+5. 月度汇总、占收入比例、结余率重新计算
+
+### 账单大类预算
+
+1. 预算管理页选择月份
+2. 系统读取该月账单和该月大类预算
+3. 系统根据一级分类名称计算已支出金额
+4. 系统计算剩余预算、预算使用率、预算状态
+5. 页面展示大类预算表和月度预算总览
+6. 月度分析页读取同一套预算计算结果
+7. 一级分类金额根据预算状态显示提醒色或标红
+
+### 独立购物预算
+
+1. 页面读取购物预算明细
+2. 用户新增、修改、删除购物预算行
+3. 保存到 IndexedDB
+4. 系统计算实际购买小计、品类剩余预算、合计行
+5. 页面展示计算结果
+
+购物预算不读取账单数据。
+
+### 导出 / 导入
+
+导出：
+
+1. 读取设置、总预算、大类预算、购物预算、月度账单
+2. 组装成 JSON 备份对象
+3. 生成本地下载文件
+
+导入：
+
+1. 用户选择 JSON 文件
+2. 解析文件内容
+3. 校验 `appName` 和 `schemaVersion`
+4. 校验关键字段是否存在
+5. 弹出导入确认
+6. 用户确认后整包覆盖 IndexedDB 数据
+
+## 新增类型建议
+
+### UserSettings
+
+```ts
+interface UserSettings {
+  id: 'user-settings';
+  defaultMonthlyIncome: number;
+  currency: 'CNY';
+  updatedAt: string;
+}
+```
+
+### BudgetSettings
+
+```ts
+interface BudgetSettings {
+  id: 'budget-settings';
+  annualExpenseBudget: number;
+  monthlySavingTarget: number;
+  monthlyExpenseBudget: number;
+  updatedAt: string;
+}
+```
+
+### MonthlyCategoryBudget
+
+```ts
+type BudgetStatus = 'normal' | 'warning' | 'over' | 'unmatched';
+
+interface MonthlyCategoryBudget {
+  id: string;
+  month: string;
+  categoryName: string;
+  budgetAmount: number;
+  overBudgetNote: string;
+  remark: string;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+说明：
+
+- `spentAmount`、`remainingAmount`、`usageRate`、`status` 建议作为计算结果，不直接作为用户编辑字段。
+- 如果为了页面缓存可以临时存储，但最终展示前仍应重新计算。
+
+### ShoppingBudgetItem
+
+```ts
+type ShoppingBudgetStatus = 'planned' | 'purchased' | 'paused' | 'abandoned';
+type ShoppingBudgetPriority = 'must' | 'should' | 'optional' | 'not_now';
+
+interface ShoppingBudgetItem {
+  id: string;
+  categoryName: string;
+  itemName: string;
+  plannedQuantity: number;
+  purchasedQuantity: number;
+  quantityUnit: string;
+  budgetAmount: number;
+  actualUnitAmount: number;
+  purchasedItem: string;
+  recommendedPlan: string;
+  status: ShoppingBudgetStatus;
+  priority: ShoppingBudgetPriority;
+  remark: string;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+### BackupFile
+
+```ts
+interface BackupFile {
+  appName: 'expense-bill-analyzer';
+  schemaVersion: 2;
+  exportedAt: string;
+  userSettings: UserSettings;
+  budgetSettings: BudgetSettings;
+  monthlyCategoryBudgets: MonthlyCategoryBudget[];
+  shoppingBudgetItems: ShoppingBudgetItem[];
+  monthlyBills: MonthlyBill[];
+}
+```
+
+## 新增计算函数建议
+
+放在 `utils/calculateBudget.ts`。
+
+```text
+calculateMonthlyCategoryBudgetRows
+calculateMonthlyBudgetOverview
+calculateMonthlyBudgetSettlement
+calculateShoppingBudgetRows
+calculateShoppingBudgetSummary
+getBudgetStatusByUsageRate
+getCategoryOptionsFromMonthlyBill
+mergeBudgetStatusIntoPrimaryRows
+mergeBudgetStatusIntoCombinedRows
+```
+
+### 账单大类预算计算
+
+输入：
+
+- 当前月份
+- 月度大类预算
+- 当前月份账单记录
+
+输出：
+
+- 大类预算金额
+- 已支出金额
+- 剩余预算金额
+- 预算使用率
+- 状态
+
+### 购物预算计算
+
+输入：
+
+- 购物预算明细
+
+输出：
+
+- 实际购买小计
+- 品类剩余预算
+- 行是否超支
+- 合计行
+
+## 新增存储函数建议
+
+### settingsStorage.ts
+
+```text
+getUserSettings
+saveUserSettings
+getBudgetSettings
+saveBudgetSettings
+```
+
+### budgetStorage.ts
+
+```text
+getMonthlyCategoryBudgets
+saveMonthlyCategoryBudget
+saveMonthlyCategoryBudgets
+deleteMonthlyCategoryBudget
+copyMonthlyCategoryBudgets
+getShoppingBudgetItems
+saveShoppingBudgetItem
+saveShoppingBudgetItems
+deleteShoppingBudgetItem
+```
+
+### backupStorage.ts
+
+```text
+exportLocalData
+validateBackupFile
+importLocalData
+```
+
+## IndexedDB 方案
+
+继续使用 IndexedDB。
+
+第二版建议新增对象仓库：
+
+| store | keyPath | 说明 |
+| --- | --- | --- |
+| userSettings | id | 默认月收入 |
+| budgetSettings | id | 总预算设置 |
+| monthlyCategoryBudgets | id | 月度大类预算 |
+| shoppingBudgetItems | id | 独立购物预算 |
+
+已有 `monthlyBills` 继续保留，用于账单数据。
+
+如果当前 `billStorage.ts` 已经封装数据库打开逻辑，第二版优先扩展现有封装，不重新写一套 IndexedDB 工具。
+
+## 覆盖确认技术方案
+
+在数据预览页保存账单前：
+
+1. 调用 `checkMonthlyBillExists(month)`
+2. 如果不存在，直接保存
+3. 如果存在，读取旧账单摘要
+4. 生成本次上传摘要
+5. 打开 `OverwriteBillModal`
+6. 用户确认后调用保存覆盖
+7. 覆盖成功后重新计算该月大类预算
+
+第二版不实现账单合并。
+
+## 月度分析预算联动技术方案
+
+月度分析页渲染表格前：
+
+1. 读取当前月份账单
+2. 读取当前月份大类预算
+3. 计算一级分类表
+4. 调用 `mergeBudgetStatusIntoPrimaryRows`
+5. 调用 `mergeBudgetStatusIntoCombinedRows`
+6. 表格根据 `budgetStatus` 控制金额颜色
+7. 点击金额时，把预算信息传给明细弹框
+
+弹框继续使用现有明细筛选逻辑，只新增预算信息展示区。
+
+## 导出 / 导入技术方案
+
+### 导出
+
+使用浏览器原生能力生成文件：
+
+1. `JSON.stringify` 备份对象
+2. 创建 `Blob`
+3. 创建下载链接
+4. 触发下载
+
+文件名建议：
+
+```text
+expense-bill-analyzer-backup-YYYYMMDD-HHmm.json
+```
+
+### 导入
+
+1. 使用文件选择框读取 JSON
+2. `JSON.parse`
+3. 校验结构
+4. 二次确认
+5. 清空并写入相关 IndexedDB store
+
+导入失败时不能清空旧数据。
+
+## 兼容性和迁移
+
+已有第一版本地账单数据需要继续可用。
+
+第二版新增 store 后：
+
+- 如果没有用户设置，创建默认设置，默认月收入 9000
+- 如果没有总预算设置，创建默认总预算，金额为 0
+- 如果没有预算数据，预算管理页显示空状态
+- 第一版已保存账单不需要迁移，只需要补充摘要字段时可按现有记录计算
+
+## 第二版验证方案
+
+开发完成后需要验证：
+
+1. `npm run build` 通过
+2. 默认月收入修改后，月度分析计算变化
+3. 新增大类预算后，能按账单一级分类反写已支出
+4. 超支时一级分类金额标红
+5. 复制月份预算后，目标月份按目标账单重新计算
+6. 独立购物预算不读取账单数据
+7. 导出 JSON 后能在同一浏览器导入恢复
+8. 导入错误文件不会覆盖当前数据
+9. 重复月份上传时显示覆盖确认
+
+## 第二版暂不做内容
+
+- 后端
+- 登录
+- 云端数据库
+- 自动云端同步
+- 账单合并
+- 购物预算和账单自动匹配
+- 未设置预算的大类提醒

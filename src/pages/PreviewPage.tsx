@@ -1,8 +1,10 @@
 import { Alert, Button, Empty, message, Table, Typography } from 'antd';
+import { useState } from 'react';
 import type { TableColumnsType } from 'antd';
 import AbnormalTable from '../components/AbnormalTable/AbnormalTable';
+import OverwriteBillModal from '../components/UploadBill/OverwriteBillModal';
 import type { MonthlyBill, ParsedBillFile, StandardBillRecord } from '../types/bill';
-import { checkMonthlyBillExists, saveMonthlyBill } from '../utils/billStorage';
+import { billRepository } from '../repositories/billRepository';
 import { getExpenseRecords, sumAmount } from '../utils/calculateSummary';
 import { formatAmount } from '../utils/format';
 
@@ -12,6 +14,8 @@ interface PreviewPageProps {
 }
 
 export default function PreviewPage({ previewFile, onSaved }: PreviewPageProps) {
+  const [pendingBills, setPendingBills] = useState<MonthlyBill[]>([]);
+  const [overwritePair, setOverwritePair] = useState<{ oldBill: MonthlyBill; newBill: MonthlyBill } | null>(null);
   const columns: TableColumnsType<StandardBillRecord> = [
     { title: '日期', dataIndex: 'date', key: 'date' },
     { title: '类型', dataIndex: 'type', key: 'type' },
@@ -33,23 +37,22 @@ export default function PreviewPage({ previewFile, onSaved }: PreviewPageProps) 
     }
 
     const bills = buildMonthlyBills(previewFile);
-    const existingMonths: string[] = [];
 
     for (const bill of bills) {
-      if (await checkMonthlyBillExists(bill.month)) {
-        existingMonths.push(bill.month);
-      }
-    }
-
-    if (existingMonths.length > 0) {
-      const confirmed = window.confirm(`${existingMonths.join('、')} 已存在，是否覆盖这些月份的本地账单？`);
-      if (!confirmed) {
+      const oldBill = await billRepository.getMonthlyBill(bill.month);
+      if (oldBill) {
+        setPendingBills(bills);
+        setOverwritePair({ oldBill, newBill: bill });
         return;
       }
     }
 
+    await saveBillsAndOpenAnalysis(bills);
+  };
+
+  const saveBillsAndOpenAnalysis = async (bills: MonthlyBill[]) => {
     for (const bill of bills) {
-      await saveMonthlyBill(bill);
+      await billRepository.saveMonthlyBill(bill);
     }
 
     const defaultMonth = chooseDefaultAnalysisMonth(bills);
@@ -93,6 +96,21 @@ export default function PreviewPage({ previewFile, onSaved }: PreviewPageProps) 
         </div>
         <AbnormalTable data={previewFile.abnormalRecords} />
       </div>
+      <OverwriteBillModal
+        open={Boolean(overwritePair)}
+        oldBill={overwritePair?.oldBill}
+        newBill={overwritePair?.newBill}
+        onCancel={() => {
+          setOverwritePair(null);
+          setPendingBills([]);
+        }}
+        onConfirm={() => {
+          const bills = pendingBills;
+          setOverwritePair(null);
+          setPendingBills([]);
+          void saveBillsAndOpenAnalysis(bills);
+        }}
+      />
     </div>
   );
 }
@@ -117,6 +135,9 @@ function buildMonthlyBills(previewFile: ParsedBillFile): MonthlyBill[] {
       totalExpense: sumAmount(expenseRecords),
       expenseCount: expenseRecords.length,
       abnormalCount: abnormalRecords.length,
+      rawRowCount: records.length + abnormalRecords.length,
+      validExpenseRowCount: expenseRecords.length,
+      abnormalRowCount: abnormalRecords.length,
     };
   });
 }

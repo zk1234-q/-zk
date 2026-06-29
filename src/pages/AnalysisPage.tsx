@@ -1,17 +1,21 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Empty, Select, Tag, Typography } from 'antd';
 import AnalysisCharts from '../components/AnalysisCharts/AnalysisCharts';
 import AnalysisTables from '../components/AnalysisTables/AnalysisTables';
 import DetailModal from '../components/DetailModal/DetailModal';
 import type { DetailFilter, MonthlyBill, MonthlySummaryRow } from '../types/bill';
+import type { MonthlyCategoryBudget } from '../types/budget';
 import { calculateMonthlyExpenseTrend, calculatePrimaryCategoryChart, calculateSecondaryCategoryRanking } from '../utils/calculateCharts';
+import { calculateMonthlyCategoryBudgetRows, mergeBudgetStatusIntoCombinedRows, mergeBudgetStatusIntoPrimaryRows } from '../utils/calculateBudget';
 import {
   calculateCombinedCategoryRows,
   calculateMonthlySummary,
   calculatePrimaryCategoryRows,
   calculateSecondaryCategoryRows,
 } from '../utils/calculateSummary';
+import { budgetRepository } from '../repositories/budgetRepository';
 import { formatAmount, formatPercent } from '../utils/format';
+import { settingsRepository } from '../repositories/settingsRepository';
 
 interface AnalysisPageProps {
   monthlyBills: MonthlyBill[];
@@ -22,15 +26,18 @@ interface AnalysisPageProps {
 export default function AnalysisPage({ monthlyBills, selectedMonth, onChangeMonth }: AnalysisPageProps) {
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailFilter, setDetailFilter] = useState<DetailFilter | null>(null);
-  const monthlyRows = calculateMonthlySummary(monthlyBills);
-  const currentMonth = selectedMonth ?? monthlyRows[monthlyRows.length - 1]?.month;
+  const [monthlyIncome, setMonthlyIncome] = useState(9000);
+  const [monthlyBudgets, setMonthlyBudgets] = useState<MonthlyCategoryBudget[]>([]);
+  const monthlyRows = calculateMonthlySummary(monthlyBills, monthlyIncome);
+  const currentMonth = selectedMonth ?? monthlyRows[0]?.month;
   const currentBill = monthlyBills.find((bill) => bill.month === currentMonth);
   const summary = monthlyRows.find((row) => row.month === currentMonth);
   const currentRecords = currentBill?.records ?? [];
   const allRecords = monthlyBills.flatMap((bill) => bill.records);
-  const primaryRows = currentMonth ? calculatePrimaryCategoryRows(currentRecords, currentMonth) : [];
-  const secondaryRows = currentMonth ? calculateSecondaryCategoryRows(currentRecords, currentMonth) : [];
-  const combinedRows = currentMonth ? calculateCombinedCategoryRows(currentRecords, currentMonth) : [];
+  const budgetRows = calculateMonthlyCategoryBudgetRows(monthlyBudgets, currentBill);
+  const primaryRows = currentMonth ? mergeBudgetStatusIntoPrimaryRows(calculatePrimaryCategoryRows(currentRecords, currentMonth, monthlyIncome), budgetRows) : [];
+  const secondaryRows = currentMonth ? calculateSecondaryCategoryRows(currentRecords, currentMonth, monthlyIncome) : [];
+  const combinedRows = currentMonth ? mergeBudgetStatusIntoCombinedRows(calculateCombinedCategoryRows(currentRecords, currentMonth, monthlyIncome), budgetRows) : [];
   const trendData = calculateMonthlyExpenseTrend(monthlyBills);
   const primaryChartData = calculatePrimaryCategoryChart(primaryRows);
   const secondaryRankingData = calculateSecondaryCategoryRanking(secondaryRows);
@@ -39,6 +46,19 @@ export default function AnalysisPage({ monthlyBills, selectedMonth, onChangeMont
     setDetailFilter(filter);
     setDetailOpen(true);
   };
+
+  useEffect(() => {
+    void settingsRepository.getUserSettings().then((settings) => setMonthlyIncome(settings.defaultMonthlyIncome));
+  }, []);
+
+  useEffect(() => {
+    if (!currentMonth) {
+      setMonthlyBudgets([]);
+      return;
+    }
+
+    void budgetRepository.getMonthlyCategoryBudgets(currentMonth).then(setMonthlyBudgets);
+  }, [currentMonth]);
 
   const openMonthlyDetail = (row: MonthlySummaryRow) => {
     openDetail({
@@ -105,6 +125,15 @@ export default function AnalysisPage({ monthlyBills, selectedMonth, onChangeMont
           secondaryRows={secondaryRows}
           combinedRows={combinedRows}
           onOpenMonthlyDetail={openMonthlyDetail}
+          onOpenPrimaryDetail={(primaryCategory, amount, budgetInfo) =>
+            openDetail({
+              month: currentMonth,
+              primaryCategory,
+              title: `${currentMonth} ${primaryCategory}消费明细`,
+              expectedAmount: amount,
+              budgetInfo,
+            })
+          }
           onOpenSecondaryDetail={(primaryCategory, secondaryCategory, amount) =>
             openDetail({
               month: currentMonth,

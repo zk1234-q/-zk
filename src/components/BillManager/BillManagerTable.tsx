@@ -13,7 +13,9 @@ export default function BillManagerTable({ data, onOpenAnalysis, onDeleteMonth }
   const columns: TableColumnsType<MonthlyBill> = [
     { title: '月份', dataIndex: 'month', key: 'month' },
     { title: '文件名', dataIndex: 'fileName', key: 'fileName' },
+    { title: '原始行数', dataIndex: 'rawRowCount', key: 'rawRowCount', align: 'right', render: (_value, row) => row.rawRowCount ?? row.records.length },
     { title: '支出笔数', dataIndex: 'expenseCount', key: 'expenseCount', align: 'right' },
+    { title: '有效支出行', dataIndex: 'validExpenseRowCount', key: 'validExpenseRowCount', align: 'right', render: (_value, row) => row.validExpenseRowCount ?? row.expenseCount },
     {
       title: '月总支出',
       dataIndex: 'totalExpense',
@@ -26,7 +28,10 @@ export default function BillManagerTable({ data, onOpenAnalysis, onDeleteMonth }
       dataIndex: 'abnormalCount',
       key: 'abnormalCount',
       align: 'right',
-      render: (value: number) => (value > 0 ? <Tag color="warning">{value}</Tag> : <Tag color="success">0</Tag>),
+      render: (value: number, row) => {
+        const count = row.abnormalRowCount ?? value;
+        return count > 0 ? <Tag color="warning">{count}</Tag> : <Tag color="success">0</Tag>;
+      },
     },
     {
       title: '操作',

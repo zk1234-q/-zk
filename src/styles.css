@@ -26,20 +26,26 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 22px 18px 18px;
+  padding: 22px 18px 20px;
   border-bottom: 1px solid #edf1f6;
 }
 
 .brand-mark {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
-  border: 1px solid #c9d7ee;
-  border-radius: 8px;
-  background: #eef5ff;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border: 1px solid #b8c8e7;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #eef5ff 0%, #ffffff 52%, #e8f7f1 100%);
   color: #1d5fd6;
-  font-weight: 700;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 8px 18px rgba(29, 95, 214, 0.12);
+  font-size: 20px;
+}
+
+.app-brand > div:last-child {
+  min-width: 0;
 }
 
 .app-brand h4,
@@ -59,11 +65,24 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 76px;
-  padding: 14px 28px;
+  min-height: 88px;
+  gap: 18px;
+  padding: 18px 28px;
   border-bottom: 1px solid #e1e6ef;
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(10px);
+}
+
+.app-header > div {
+  min-width: 0;
+}
+
+.app-header h3 {
+  line-height: 1.2;
+}
+
+.app-header .ant-btn {
+  flex: 0 0 auto;
 }
 
 .app-content {
@@ -157,6 +176,24 @@ body {
   line-height: 1.15;
 }
 
+.amount-danger {
+  color: #cf1322;
+  font-weight: 700;
+}
+
+.amount-warning {
+  color: #ad6800;
+  font-weight: 700;
+}
+
+.table-total-row {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+  text-align: right;
+  font-weight: 700;
+}
+
 .chart-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
@@ -191,6 +228,16 @@ body {
 
 .ant-tabs-tab {
   padding: 10px 0;
+}
+
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-bottom: 12px;
+  color: #64748b;
+  font-size: 13px;
 }
 
 .ant-table-wrapper .ant-table {

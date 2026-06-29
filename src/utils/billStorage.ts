@@ -1,33 +1,18 @@
-import { openDB, type DBSchema } from 'idb';
 import type { MonthlyBill } from '../types/bill';
-
-interface ExpenseBillDb extends DBSchema {
-  monthlyBills: {
-    key: string;
-    value: MonthlyBill;
-    indexes: {
-      month: string;
-    };
-  };
-}
-
-const DB_NAME = 'expense-bill-analyzer';
-const DB_VERSION = 1;
-const MONTHLY_BILL_STORE = 'monthlyBills';
-
-async function getDb() {
-  return openDB<ExpenseBillDb>(DB_NAME, DB_VERSION, {
-    upgrade(db) {
-      const store = db.createObjectStore(MONTHLY_BILL_STORE, { keyPath: 'id' });
-      store.createIndex('month', 'month', { unique: true });
-    },
-  });
-}
+import { getDb, MONTHLY_BILL_STORE } from './db';
 
 export async function getAllMonthlyBills(): Promise<MonthlyBill[]> {
   const db = await getDb();
   const bills = await db.getAll(MONTHLY_BILL_STORE);
   return bills.sort((a, b) => b.month.localeCompare(a.month));
+}
+
+export async function replaceAllMonthlyBills(bills: MonthlyBill[]): Promise<void> {
+  const db = await getDb();
+  const tx = db.transaction(MONTHLY_BILL_STORE, 'readwrite');
+  await tx.store.clear();
+  await Promise.all(bills.map((bill) => tx.store.put(bill)));
+  await tx.done;
 }
 
 export async function getMonthlyBill(month: string): Promise<MonthlyBill | undefined> {

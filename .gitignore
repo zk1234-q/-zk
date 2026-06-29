@@ -12,6 +12,10 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 vite-dev.*.log
+vite-v*.log
+vite-v*.err.log
+vite-dev.log
+vite-dev-persistent*.log
 .codex-vite-dev.mjs
 
 .DS_Store
