@@ -1,7 +1,7 @@
 import { openDB, type DBSchema } from 'idb';
 import type { AssetAccount, AssetSnapshot } from '../types/asset';
 import type { MonthlyBill } from '../types/bill';
-import type { MonthlyCategoryBudget, ShoppingBudgetItem } from '../types/budget';
+import type { MonthlyCategoryBudget, ShoppingBudgetCategory, ShoppingBudgetItem, ShoppingBudgetPlan } from '../types/budget';
 import type { Goal } from '../types/goal';
 import type { BudgetSettings, UserSettings } from '../types/settings';
 
@@ -31,6 +31,21 @@ export interface ExpenseBillDb extends DBSchema {
   shoppingBudgetItems: {
     key: string;
     value: ShoppingBudgetItem;
+    indexes: {
+      planId: string;
+      categoryId: string;
+    };
+  };
+  shoppingBudgetPlans: {
+    key: string;
+    value: ShoppingBudgetPlan;
+  };
+  shoppingBudgetCategories: {
+    key: string;
+    value: ShoppingBudgetCategory;
+    indexes: {
+      planId: string;
+    };
   };
   assetAccounts: {
     key: string;
@@ -53,19 +68,21 @@ export interface ExpenseBillDb extends DBSchema {
 }
 
 export const DB_NAME = 'expense-bill-analyzer';
-export const DB_VERSION = 4;
+export const DB_VERSION = 5;
 export const MONTHLY_BILL_STORE = 'monthlyBills';
 export const USER_SETTINGS_STORE = 'userSettings';
 export const BUDGET_SETTINGS_STORE = 'budgetSettings';
 export const MONTHLY_CATEGORY_BUDGET_STORE = 'monthlyCategoryBudgets';
 export const SHOPPING_BUDGET_STORE = 'shoppingBudgetItems';
+export const SHOPPING_BUDGET_PLAN_STORE = 'shoppingBudgetPlans';
+export const SHOPPING_BUDGET_CATEGORY_STORE = 'shoppingBudgetCategories';
 export const ASSET_ACCOUNT_STORE = 'assetAccounts';
 export const ASSET_SNAPSHOT_STORE = 'assetSnapshots';
 export const GOAL_STORE = 'goals';
 
 export async function getDb() {
   return openDB<ExpenseBillDb>(DB_NAME, DB_VERSION, {
-    upgrade(db) {
+    upgrade(db, _oldVersion, _newVersion, transaction) {
       if (!db.objectStoreNames.contains(MONTHLY_BILL_STORE)) {
         const store = db.createObjectStore(MONTHLY_BILL_STORE, { keyPath: 'id' });
         store.createIndex('month', 'month', { unique: true });
@@ -85,7 +102,26 @@ export async function getDb() {
       }
 
       if (!db.objectStoreNames.contains(SHOPPING_BUDGET_STORE)) {
-        db.createObjectStore(SHOPPING_BUDGET_STORE, { keyPath: 'id' });
+        const store = db.createObjectStore(SHOPPING_BUDGET_STORE, { keyPath: 'id' });
+        store.createIndex('planId', 'planId', { unique: false });
+        store.createIndex('categoryId', 'categoryId', { unique: false });
+      } else {
+        const store = transaction.objectStore(SHOPPING_BUDGET_STORE);
+        if (!store.indexNames.contains('planId')) {
+          store.createIndex('planId', 'planId', { unique: false });
+        }
+        if (!store.indexNames.contains('categoryId')) {
+          store.createIndex('categoryId', 'categoryId', { unique: false });
+        }
+      }
+
+      if (!db.objectStoreNames.contains(SHOPPING_BUDGET_PLAN_STORE)) {
+        db.createObjectStore(SHOPPING_BUDGET_PLAN_STORE, { keyPath: 'id' });
+      }
+
+      if (!db.objectStoreNames.contains(SHOPPING_BUDGET_CATEGORY_STORE)) {
+        const store = db.createObjectStore(SHOPPING_BUDGET_CATEGORY_STORE, { keyPath: 'id' });
+        store.createIndex('planId', 'planId', { unique: false });
       }
 
       if (!db.objectStoreNames.contains(ASSET_ACCOUNT_STORE)) {

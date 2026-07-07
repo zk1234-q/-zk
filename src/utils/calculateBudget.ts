@@ -6,8 +6,12 @@ import type {
   MonthlyBudgetSettlement,
   MonthlyCategoryBudget,
   MonthlyCategoryBudgetRow,
+  ShoppingBudgetCategory,
+  ShoppingBudgetCategoryRow,
   ShoppingBudgetItem,
-  ShoppingBudgetRow,
+  ShoppingBudgetItemRow,
+  ShoppingBudgetPlan,
+  ShoppingBudgetPlanRow,
   ShoppingBudgetSummary,
 } from '../types/budget';
 import type { BudgetSettings, UserSettings } from '../types/settings';
@@ -136,40 +140,105 @@ export function calculateMonthlyBudgetSettlement(
   };
 }
 
-export function calculateShoppingBudgetRows(items: ShoppingBudgetItem[]): ShoppingBudgetRow[] {
-  const categoryTotals = new Map<string, { budget: number; actual: number }>();
-
-  for (const item of items) {
-    const categoryName = normalizeCategoryName(item.categoryName);
-    const total = categoryTotals.get(categoryName) ?? { budget: 0, actual: 0 };
-    total.budget += item.budgetAmount;
-    total.actual += item.purchasedQuantity * item.actualUnitAmount;
-    categoryTotals.set(categoryName, total);
+export function calculateShoppingBudgetItemUsedAmount(item: ShoppingBudgetItem): number {
+  if (item.status === 'purchased') {
+    return roundMoney(item.actualAmount);
   }
 
-  return items.map((item) => {
-    const categoryName = normalizeCategoryName(item.categoryName);
-    const actualTotalAmount = roundMoney(item.purchasedQuantity * item.actualUnitAmount);
-    const totals = categoryTotals.get(categoryName) ?? { budget: 0, actual: 0 };
+  if (item.status === 'planned') {
+    return roundMoney(item.plannedAmount);
+  }
 
-    return {
-      ...item,
-      categoryName,
-      actualTotalAmount,
-      categoryRemainingAmount: roundMoney(totals.budget - totals.actual),
-      isOverBudget: actualTotalAmount > item.budgetAmount,
-    };
-  });
+  return 0;
 }
 
-export function calculateShoppingBudgetSummary(rows: ShoppingBudgetRow[]): ShoppingBudgetSummary {
-  const totalBudgetAmount = roundMoney(rows.reduce((sum, row) => sum + row.budgetAmount, 0));
-  const totalActualAmount = roundMoney(rows.reduce((sum, row) => sum + row.actualTotalAmount, 0));
-  const totalRemainingAmount = roundMoney(totalBudgetAmount - totalActualAmount);
+export function calculateShoppingBudgetItemRows(items: ShoppingBudgetItem[], categories: ShoppingBudgetCategory[]): ShoppingBudgetItemRow[] {
+  const categoryMap = new Map(categories.map((category) => [category.id, category]));
+  const categorySortMap = new Map(categories.map((category) => [category.id, category.sortOrder]));
+
+  return [...items]
+    .sort((a, b) => {
+      const categorySortDiff = (categorySortMap.get(a.categoryId) ?? Number.MAX_SAFE_INTEGER) - (categorySortMap.get(b.categoryId) ?? Number.MAX_SAFE_INTEGER);
+      return categorySortDiff || a.sortOrder - b.sortOrder || a.createdAt.localeCompare(b.createdAt);
+    })
+    .map((item) => {
+      const category = categoryMap.get(item.categoryId);
+
+      return {
+        ...item,
+        categoryName: category?.name ?? '未分类',
+        categoryBudgetAmount: category?.budgetAmount ?? 0,
+        usedAmount: calculateShoppingBudgetItemUsedAmount(item),
+      };
+    });
+}
+
+export function calculateShoppingBudgetCategoryRows(categories: ShoppingBudgetCategory[], items: ShoppingBudgetItem[]): ShoppingBudgetCategoryRow[] {
+  const itemsByCategory = new Map<string, ShoppingBudgetItem[]>();
+
+  items.forEach((item) => {
+    const nextItems = itemsByCategory.get(item.categoryId) ?? [];
+    nextItems.push(item);
+    itemsByCategory.set(item.categoryId, nextItems);
+  });
+
+  return [...categories]
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.createdAt.localeCompare(b.createdAt))
+    .map((category) => {
+      const categoryItems = itemsByCategory.get(category.id) ?? [];
+      const plannedAmount = roundMoney(categoryItems.reduce((sum, item) => sum + item.plannedAmount, 0));
+      const actualAmount = roundMoney(categoryItems.reduce((sum, item) => sum + item.actualAmount, 0));
+      const usedAmount = roundMoney(categoryItems.reduce((sum, item) => sum + calculateShoppingBudgetItemUsedAmount(item), 0));
+      const remainingAmount = roundMoney(category.budgetAmount - usedAmount);
+
+      return {
+        ...category,
+        plannedAmount,
+        actualAmount,
+        usedAmount,
+        remainingAmount,
+        isPlanOverBudget: plannedAmount > category.budgetAmount,
+        isActualOverBudget: actualAmount > category.budgetAmount,
+        isUsedOverBudget: remainingAmount < 0,
+      };
+    });
+}
+
+export function calculateShoppingBudgetPlanRows(plans: ShoppingBudgetPlan[], categoryRows: ShoppingBudgetCategoryRow[]): ShoppingBudgetPlanRow[] {
+  const categoriesByPlan = new Map<string, ShoppingBudgetCategoryRow[]>();
+
+  categoryRows.forEach((category) => {
+    const nextCategories = categoriesByPlan.get(category.planId) ?? [];
+    nextCategories.push(category);
+    categoriesByPlan.set(category.planId, nextCategories);
+  });
+
+  return [...plans]
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.createdAt.localeCompare(b.createdAt))
+    .map((plan) => {
+      const planCategories = categoriesByPlan.get(plan.id) ?? [];
+      const totalBudgetAmount = roundMoney(planCategories.reduce((sum, category) => sum + category.budgetAmount, 0));
+      const usedAmount = roundMoney(planCategories.reduce((sum, category) => sum + category.usedAmount, 0));
+      const remainingAmount = roundMoney(totalBudgetAmount - usedAmount);
+
+      return {
+        ...plan,
+        totalBudgetAmount,
+        usedAmount,
+        remainingAmount,
+        isOverBudget: remainingAmount < 0,
+      };
+    });
+}
+
+export function calculateShoppingBudgetSummary(planRows: ShoppingBudgetPlanRow[]): ShoppingBudgetSummary {
+  const totalBudgetAmount = roundMoney(planRows.reduce((sum, row) => sum + row.totalBudgetAmount, 0));
+  const totalUsedAmount = roundMoney(planRows.reduce((sum, row) => sum + row.usedAmount, 0));
+  const totalRemainingAmount = roundMoney(totalBudgetAmount - totalUsedAmount);
 
   return {
     totalBudgetAmount,
-    totalActualAmount,
+    totalUsedAmount,
     totalRemainingAmount,
     isOverBudget: totalRemainingAmount < 0,
   };

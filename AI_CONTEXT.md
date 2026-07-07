@@ -27,6 +27,8 @@ Current stable modules:
 
 Planned modules:
 
+- V2.7 independent shopping budget optimization: implemented locally. The old flat shopping budget detail table is now three layers: shopping budget plans, shopping budget categories, and shopping budget items. Plans separate themes such as annual clothing budget and electronics budget. Categories hold category-level budget limits. Items select a category and track planned quantity, planned amount, actual amount, status, and remark. Plans, categories, and items support the same drag-sort-and-save interaction used by Asset Overview. The shopping budget page uses a master-detail pattern: selecting a plan row drives the category budget and item tables below.
+- Local privacy protection: master password unlock, encrypted IndexedDB storage for bills/budgets/assets/goals/settings, encrypted backup export/import, change master password by re-encrypting local data, manual/auto lock. Goal is to protect local data and backup files when someone can open the local URL but does not know the master password. This does not defend against a compromised computer, malware, malicious browser extensions, or someone using the app while it is already unlocked.
 - Cloud version: login, backend API, database, local-to-cloud migration.
 
 ## Navigation Target
@@ -75,4 +77,5 @@ Keep the app local-first for now, but structure it as cloud-ready:
 1. V2.1 Architecture governance and second-version acceptance fixes.
 2. V2.5 Asset Overview. Implemented locally.
 3. V2.6 Goal Management. Implemented locally.
-4. V3.0 Cloud version.
+4. V2.7 Independent shopping budget optimization. Implemented locally.
+5. V3.0 Cloud version.

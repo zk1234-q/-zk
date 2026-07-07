@@ -4,6 +4,7 @@ export interface AssetAccount {
   id: string;
   name: string;
   type: AssetAccountType;
+  groupName?: string;
   remark: string;
   enabled: boolean;
   createdAt: string;
@@ -16,6 +17,7 @@ export interface AssetSnapshotItem {
   accountName: string;
   accountType: AssetAccountType;
   amount: number;
+  includedInTotal?: boolean;
   remark: string;
 }
 

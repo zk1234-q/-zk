@@ -55,9 +55,45 @@ export interface MonthlyBudgetSettlement {
 }
 
 export type ShoppingBudgetStatus = 'planned' | 'purchased' | 'paused' | 'abandoned';
-export type ShoppingBudgetPriority = 'must' | 'should' | 'optional' | 'not_now';
+
+export interface ShoppingBudgetPlan {
+  id: string;
+  name: string;
+  totalBudgetAmount: number;
+  sortOrder: number;
+  remark: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ShoppingBudgetCategory {
+  id: string;
+  planId: string;
+  name: string;
+  budgetAmount: number;
+  sortOrder: number;
+  remark: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface ShoppingBudgetItem {
+  id: string;
+  planId: string;
+  categoryId: string;
+  itemName: string;
+  plannedQuantity: number;
+  actualQuantity: number;
+  plannedAmount: number;
+  actualAmount: number;
+  status: ShoppingBudgetStatus;
+  sortOrder: number;
+  remark: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LegacyShoppingBudgetItem {
   id: string;
   categoryName: string;
   itemName: string;
@@ -69,33 +105,51 @@ export interface ShoppingBudgetItem {
   purchasedItem: string;
   recommendedPlan: string;
   status: ShoppingBudgetStatus;
-  priority: ShoppingBudgetPriority;
+  priority?: string;
   remark: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface ShoppingBudgetRow extends ShoppingBudgetItem {
-  actualTotalAmount: number;
-  categoryRemainingAmount: number;
+export interface ShoppingBudgetPlanRow extends ShoppingBudgetPlan {
+  usedAmount: number;
+  remainingAmount: number;
   isOverBudget: boolean;
+}
+
+export interface ShoppingBudgetCategoryRow extends ShoppingBudgetCategory {
+  plannedAmount: number;
+  actualAmount: number;
+  usedAmount: number;
+  remainingAmount: number;
+  isPlanOverBudget: boolean;
+  isActualOverBudget: boolean;
+  isUsedOverBudget: boolean;
+}
+
+export interface ShoppingBudgetItemRow extends ShoppingBudgetItem {
+  categoryName: string;
+  categoryBudgetAmount: number;
+  usedAmount: number;
 }
 
 export interface ShoppingBudgetSummary {
   totalBudgetAmount: number;
-  totalActualAmount: number;
+  totalUsedAmount: number;
   totalRemainingAmount: number;
   isOverBudget: boolean;
 }
 
 export interface BackupFile {
   appName: 'expense-bill-analyzer';
-  schemaVersion: 2 | 3 | 4;
+  schemaVersion: 2 | 3 | 4 | 5;
   exportedAt: string;
   userSettings: UserSettings;
   budgetSettings: BudgetSettings;
   monthlyCategoryBudgets: MonthlyCategoryBudget[];
-  shoppingBudgetItems: ShoppingBudgetItem[];
+  shoppingBudgetPlans?: ShoppingBudgetPlan[];
+  shoppingBudgetCategories?: ShoppingBudgetCategory[];
+  shoppingBudgetItems: Array<ShoppingBudgetItem | LegacyShoppingBudgetItem>;
   monthlyBills: MonthlyBill[];
   assetAccounts?: AssetAccount[];
   assetSnapshots?: AssetSnapshot[];

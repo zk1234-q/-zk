@@ -176,6 +176,125 @@ body {
   line-height: 1.15;
 }
 
+.asset-overview-grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 1.5fr) repeat(2, minmax(170px, 0.75fr));
+  gap: 14px;
+}
+
+.asset-net-tile {
+  min-height: 132px;
+  padding: 20px;
+  border: 1px solid #dbe5f2;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+}
+
+.asset-net-value {
+  margin-top: 8px;
+  color: #111827;
+  font-size: 38px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.asset-net-meta {
+  margin-top: 12px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.asset-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.asset-detail-section {
+  min-width: 0;
+}
+
+.asset-detail-section .section-header {
+  margin-bottom: 12px;
+}
+
+.asset-detail-row-muted td {
+  color: #94a3b8 !important;
+  background: #f8fafc;
+}
+
+.asset-detail-row-dragging td {
+  background: #eef5ff !important;
+}
+
+.asset-drag-handle {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid #d7deea;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #64748b;
+  cursor: grab;
+}
+
+.asset-drag-handle:active {
+  cursor: grabbing;
+}
+
+.asset-drag-handle:hover {
+  border-color: #1d5fd6;
+  color: #1d5fd6;
+}
+
+.asset-modal-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.asset-history-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.shopping-summary-grid {
+  margin: 16px 0;
+}
+
+.shopping-subsection {
+  margin-bottom: 16px;
+}
+
+.shopping-plan-row {
+  cursor: pointer;
+}
+
+.shopping-plan-row-active td {
+  background: #eef5ff !important;
+}
+
+.shopping-plan-row-active td:first-child {
+  box-shadow: inset 4px 0 0 #1d5fd6;
+}
+
+.shopping-budget-layout {
+  display: grid;
+  gap: 16px;
+}
+
+.shopping-nested-section {
+  box-shadow: none;
+}
+
 .amount-danger {
   color: #cf1322;
   font-weight: 700;
@@ -285,7 +404,15 @@ body {
   }
 
   .summary-grid,
+  .asset-overview-grid,
+  .asset-detail-grid,
   .chart-grid {
     grid-template-columns: 1fr;
+  }
+
+  .asset-modal-toolbar,
+  .asset-history-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
