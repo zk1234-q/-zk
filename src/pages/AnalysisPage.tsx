@@ -112,6 +112,15 @@ export default function AnalysisPage({ monthlyBills, selectedMonth, onChangeMont
           <div className="summary-value">{formatPercent(summary.balanceRate)}</div>
         </div>
       </div>
+      <div className="visual-section analysis-visual-section">
+        <div className="section-header">
+          <div>
+            <Typography.Title level={4}>可视化分析</Typography.Title>
+            <Typography.Text type="secondary">辅助查看月份趋势、一级占比和二级排行</Typography.Text>
+          </div>
+        </div>
+        <AnalysisCharts trendData={trendData} primaryData={primaryChartData} secondaryData={secondaryRankingData} />
+      </div>
       <div className="page-section analysis-table-section">
         <div className="section-header">
           <div>
@@ -144,15 +153,6 @@ export default function AnalysisPage({ monthlyBills, selectedMonth, onChangeMont
             })
           }
         />
-      </div>
-      <div className="visual-section">
-        <div className="section-header">
-          <div>
-            <Typography.Title level={4}>可视化分析</Typography.Title>
-            <Typography.Text type="secondary">辅助查看月份趋势、一级占比和二级排行</Typography.Text>
-          </div>
-        </div>
-        <AnalysisCharts trendData={trendData} primaryData={primaryChartData} secondaryData={secondaryRankingData} />
       </div>
       <DetailModal records={allRecords} filter={detailFilter} open={detailOpen} onClose={() => setDetailOpen(false)} />
     </div>
